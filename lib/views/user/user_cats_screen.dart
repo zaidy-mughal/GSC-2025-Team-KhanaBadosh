@@ -2,8 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../cat/cat_detail_screen.dart';
 import 'add_cat_screen.dart';
+import 'package:flutter_cache_manager/flutter_cache_manager.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 
-// Extension to adjust color brightness - imported from user_dashboard.dart
+// Extension to adjust color brightness
 extension ColorBrightness on Color {
   Color brighten(int amount) {
     return Color.fromARGB(
@@ -24,6 +26,98 @@ extension ColorBrightness on Color {
   }
 }
 
+// Enhanced CatsDataCache with preloading capabilities
+class CatsDataCache {
+  final ValueNotifier<List<Map<String, dynamic>>> catsNotifier = ValueNotifier<List<Map<String, dynamic>>>([]);
+  final SupabaseClient _supabase = Supabase.instance.client;
+  final CatCacheManager _cacheManager = CatCacheManager();
+  bool _preloadingImages = false;
+
+  Future<void> fetchCats({bool forceRefresh = false}) async {
+    try {
+      final response = await _supabase
+          .from('cats')
+          .select()
+          .order('name');
+
+      final List<Map<String, dynamic>> cats =
+      (response as List).map((item) => item as Map<String, dynamic>).toList();
+
+      catsNotifier.value = cats;
+
+      // Start preloading images after data is fetched
+      if (!_preloadingImages) {
+        _preloadingImages = true;
+        _preloadImages(cats);
+      }
+    } catch (e) {
+      debugPrint('Error fetching cats: $e');
+      rethrow;
+    }
+  }
+
+  // Preload images in the background
+  Future<void> _preloadImages(List<Map<String, dynamic>> cats) async {
+    for (final cat in cats) {
+      if (cat['image_url'] != null && cat['image_url'].isNotEmpty) {
+        try {
+          // Generate a stable cache key based on ID and last update time
+          final cacheKey = '${cat['id']}_${cat['updated_at'] ?? ''}';
+
+          // Check if image already exists in cache
+          final fileInfo = await _cacheManager.getFileFromCache(cacheKey);
+
+          // If not cached, download it in background
+          if (fileInfo == null) {
+            _cacheManager.getSingleFile(
+              cat['image_url'],
+              key: cacheKey,
+            ).catchError((e) {
+              debugPrint('Background preload error for cat ${cat['id']}: $e');
+            });
+          }
+        } catch (e) {
+          // Don't let preloading errors disrupt the app
+          debugPrint('Preload error: $e');
+        }
+      }
+    }
+    _preloadingImages = false;
+  }
+
+  void updateCat(Map<String, dynamic> updatedCat) {
+    final currentCats = List<Map<String, dynamic>>.from(catsNotifier.value);
+    final index = currentCats.indexWhere((cat) => cat['id'] == updatedCat['id']);
+
+    if (index != -1) {
+      currentCats[index] = updatedCat;
+      catsNotifier.value = currentCats;
+    }
+  }
+}
+
+// Improved CatCacheManager with persistent storage
+class CatCacheManager extends CacheManager {
+  static const key = 'catAppCacheKey';
+  static const Duration cacheDuration = Duration(days: 14); // Extended cache duration
+
+  static final CatCacheManager _instance = CatCacheManager._();
+  factory CatCacheManager() => _instance;
+
+  CatCacheManager._() : super(Config(
+    key,
+    stalePeriod: cacheDuration,
+    maxNrOfCacheObjects: 200, // Increased cache size
+    repo: JsonCacheInfoRepository(databaseName: key),
+    fileService: HttpFileService(),
+  ));
+
+  // Get a stable cache key for an image
+  static String getCacheKey(Map<String, dynamic> cat) {
+    return '${cat['id']}_${cat['updated_at'] ?? ''}';
+  }
+}
+
 class CatsListScreen extends StatefulWidget {
   const CatsListScreen({super.key});
 
@@ -31,25 +125,38 @@ class CatsListScreen extends StatefulWidget {
   State<CatsListScreen> createState() => _CatsListScreenState();
 }
 
-class _CatsListScreenState extends State<CatsListScreen> with SingleTickerProviderStateMixin {
-  List<Map<String, dynamic>> _cats = [];
+class _CatsListScreenState extends State<CatsListScreen> with SingleTickerProviderStateMixin, AutomaticKeepAliveClientMixin {
+  final _catsCache = CatsDataCache();
   bool _isLoading = true;
   late AnimationController _animationController;
   bool _showAddOptions = false;
+  final ScrollController _scrollController = ScrollController();
+
+  // Keep this state alive when navigating
+  @override
+  bool get wantKeepAlive => true;
 
   @override
   void initState() {
     super.initState();
-    _fetchCats();
+    _loadCats();
     _animationController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 300),
     );
+
+    // Add listener for pagination or lazy loading if needed
+    _scrollController.addListener(_scrollListener);
+  }
+
+  void _scrollListener() {
+    // Implement pagination logic here if needed
   }
 
   @override
   void dispose() {
     _animationController.dispose();
+    _scrollController.dispose();
     super.dispose();
   }
 
@@ -64,30 +171,16 @@ class _CatsListScreenState extends State<CatsListScreen> with SingleTickerProvid
     });
   }
 
-  Future<void> _fetchCats() async {
+  Future<void> _loadCats() async {
     setState(() {
       _isLoading = true;
     });
 
     try {
-      final userId = Supabase.instance.client.auth.currentUser?.id;
-      if (userId == null) {
-        setState(() {
-          _isLoading = false;
-          _cats = [];
-        });
-        return;
-      }
-
-      final response = await Supabase.instance.client
-          .from('cats')
-          .select()
-          .eq('user_id', userId)
-          .order('created_at', ascending: false);
+      await _catsCache.fetchCats();
 
       if (mounted) {
         setState(() {
-          _cats = List<Map<String, dynamic>>.from(response);
           _isLoading = false;
         });
       }
@@ -103,6 +196,29 @@ class _CatsListScreenState extends State<CatsListScreen> with SingleTickerProvid
     }
   }
 
+  Future<void> _refreshCats() async {
+    try {
+      // Clear the image cache only when explicitly refreshing
+      await CatCacheManager().emptyCache();
+      await _catsCache.fetchCats(forceRefresh: true);
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Cat data refreshed'),
+            duration: Duration(seconds: 1),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error refreshing cats: ${e.toString()}')),
+        );
+      }
+    }
+  }
+
   Future<void> _addNewCat() async {
     _toggleAddOptions(); // Hide the menu first
     final result = await Navigator.push(
@@ -111,12 +227,14 @@ class _CatsListScreenState extends State<CatsListScreen> with SingleTickerProvid
     );
 
     if (result == true) {
-      _fetchCats();
+      // Force refresh to get the newly added cat
+      _refreshCats();
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    super.build(context); // Required for AutomaticKeepAliveClientMixin
     final colors = Theme.of(context).colorScheme;
 
     return Scaffold(
@@ -159,88 +277,103 @@ class _CatsListScreenState extends State<CatsListScreen> with SingleTickerProvid
                   ),
                 ),
                 child: SafeArea(
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
+                  child: ValueListenableBuilder<List<Map<String, dynamic>>>(
+                    valueListenable: _catsCache.catsNotifier,
+                    builder: (context, cats, _) {
+                      return Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          Row(
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Icon(
-                                Icons.pets,
-                                color: colors.primary,
-                                size: 24,
+                              Row(
+                                children: [
+                                  Icon(
+                                    Icons.pets,
+                                    color: colors.primary,
+                                    size: 24,
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Text(
+                                    'My Cats',
+                                    style: TextStyle(
+                                      fontSize: 24,
+                                      fontWeight: FontWeight.bold,
+                                      color: colors.onSurface,
+                                    ),
+                                  ),
+                                ],
                               ),
-                              const SizedBox(width: 8),
+                              const SizedBox(height: 4),
                               Text(
-                                'My Cats',
+                                cats.isEmpty
+                                    ? 'Add your feline friends'
+                                    : '${cats.length} cat${cats.length == 1 ? '' : 's'} added',
                                 style: TextStyle(
-                                  fontSize: 24,
-                                  fontWeight: FontWeight.bold,
-                                  color: colors.onSurface,
+                                  fontSize: 14,
+                                  color: colors.onSurface.withOpacity(0.7),
                                 ),
                               ),
                             ],
                           ),
-                          const SizedBox(height: 4),
-                          Text(
-                            _cats.isEmpty
-                                ? 'Add your feline friends'
-                                : '${_cats.length} cat${_cats.length == 1 ? '' : 's'} added',
-                            style: TextStyle(
-                              fontSize: 14,
-                              color: colors.onSurface.withOpacity(0.7),
-                            ),
+                          AddCatButton(
+                            onTap: _toggleAddOptions,
+                            colors: colors,
+                            animationController: _animationController,
                           ),
                         ],
-                      ),
-                      AddCatButton(
-                        onTap: _toggleAddOptions,
-                        colors: colors,
-                        animationController: _animationController,
-                      ),
-                    ],
+                      );
+                    },
                   ),
                 ),
               ),
 
-              // Main content area
+              // Main content area - optimize with better state management
               Expanded(
                 child: _isLoading
                     ? Center(child: CircularProgressIndicator(color: colors.primary))
-                    : _cats.isEmpty
-                    ? _buildEmptyState(colors)
-                    : RefreshIndicator(
-                  onRefresh: _fetchCats,
-                  color: colors.primary,
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 12),
-                    child: GridView.builder(
-                      padding: const EdgeInsets.only(top: 16, bottom: 80),
-                      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                        crossAxisCount: 2,
-                        crossAxisSpacing: 12,
-                        mainAxisSpacing: 12,
-                        childAspectRatio: 0.75,
-                      ),
-                      itemCount: _cats.length,
-                      itemBuilder: (context, index) {
-                        final cat = _cats[index];
-                        return CatGridCard(
-                          cat: cat,
-                          onTap: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (context) => CatDetailScreen(cat: cat),
-                              ),
+                    : ValueListenableBuilder<List<Map<String, dynamic>>>(
+                  valueListenable: _catsCache.catsNotifier,
+                  builder: (context, cats, _) {
+                    return cats.isEmpty
+                        ? _buildEmptyState(colors)
+                        : RefreshIndicator(
+                      onRefresh: _refreshCats,
+                      color: colors.primary,
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 12),
+                        child: GridView.builder(
+                          controller: _scrollController,
+                          padding: const EdgeInsets.only(top: 16, bottom: 80),
+                          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                            crossAxisCount: 2,
+                            crossAxisSpacing: 12,
+                            mainAxisSpacing: 12,
+                            childAspectRatio: 0.75,
+                          ),
+                          itemCount: cats.length,
+                          itemBuilder: (context, index) {
+                            final cat = cats[index];
+                            return OptimizedCatGridCard(
+                              cat: cat,
+                              onTap: () {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) => CatDetailScreen(cat: cat),
+                                  ),
+                                ).then((updatedCat) {
+                                  if (updatedCat != null && updatedCat is Map<String, dynamic>) {
+                                    _catsCache.updateCat(updatedCat);
+                                  }
+                                });
+                              },
                             );
                           },
-                        );
-                      },
-                    ),
-                  ),
+                        ),
+                      ),
+                    );
+                  },
                 ),
               ),
             ],
@@ -321,6 +454,203 @@ class _CatsListScreenState extends State<CatsListScreen> with SingleTickerProvid
   }
 }
 
+// New optimized card with Hero animations and better caching
+class OptimizedCatGridCard extends StatelessWidget {
+  final Map<String, dynamic> cat;
+  final VoidCallback onTap;
+
+  const OptimizedCatGridCard({
+    super.key,
+    required this.cat,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+    final cacheKey = CatCacheManager.getCacheKey(cat);
+
+    return Card(
+      elevation: 2,
+      shadowColor: colors.shadow.withOpacity(0.3),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+      ),
+      color: Theme.of(context).brightness == Brightness.light
+          ? colors.surface.brighten(10)
+          : colors.surface.brighten(15),
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: onTap,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            // Cat image with Hero animation for smooth transitions
+            Expanded(
+              flex: 3,
+              child: Stack(
+                fit: StackFit.expand,
+                children: [
+                  if (cat['image_url'] != null && cat['image_url'].isNotEmpty)
+                    Hero(
+                      tag: 'cat_image_${cat['id']}',
+                      child: CachedNetworkImage(
+                        imageUrl: cat['image_url'],
+                        fit: BoxFit.cover,
+                        placeholder: (context, url) => _buildImagePlaceholder(context, colors),
+                        errorWidget: (context, url, error) {
+                          debugPrint('Error loading image: $error');
+                          return _buildPlaceholderImage(colors);
+                        },
+                        // Use stable cache key based on cat ID and update time
+                        cacheKey: cacheKey,
+                        memCacheWidth: 300,
+                        memCacheHeight: 300,
+                        cacheManager: CatCacheManager(),
+                        // Use fadeInDuration for smoother loading experience
+                        fadeInDuration: const Duration(milliseconds: 300),
+                      ),
+                    )
+                  else
+                    _buildPlaceholderImage(colors),
+
+                  // Gradient overlay for text readability
+                  Positioned(
+                    bottom: 0,
+                    left: 0,
+                    right: 0,
+                    child: Container(
+                      height: 40,
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment.topCenter,
+                          end: Alignment.bottomCenter,
+                          colors: [
+                            Colors.transparent,
+                            Colors.black.withOpacity(0.7),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+            // Cat info
+            Expanded(
+              flex: 2,
+              child: Padding(
+                padding: const EdgeInsets.all(12),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      cat['name'] ?? 'Unknown',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: colors.onSurface,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    const SizedBox(height: 4),
+                    Row(
+                      children: [
+                        Icon(
+                          Icons.cake,
+                          size: 14,
+                          color: colors.primary,
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          '${cat['age'] ?? 0} ${int.parse(cat['age'].toString()) == 1 ? 'year' : 'years'}',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: colors.onSurface.withOpacity(0.7),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    Row(
+                      children: [
+                        _buildCatTag(context, cat['breed'] ?? 'Unknown'),
+                        const SizedBox(width: 6),
+                        _buildCatTag(context, cat['gender'] ?? 'Unknown'),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // Improved placeholder with shimmer-like effect when loading
+  Widget _buildImagePlaceholder(BuildContext context, ColorScheme colors) {
+    return Container(
+      color: colors.primary.withOpacity(0.05),
+      child: Stack(
+        alignment: Alignment.center,
+        children: [
+          const CircularProgressIndicator(
+            strokeWidth: 2,
+          ),
+          Opacity(
+            opacity: 0.3,
+            child: Icon(
+              Icons.pets,
+              size: 40,
+              color: colors.primary,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPlaceholderImage(ColorScheme colors) {
+    return Container(
+      color: colors.primary.withOpacity(0.1),
+      child: Center(
+        child: Icon(
+          Icons.pets,
+          size: 40,
+          color: colors.primary.withOpacity(0.5),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildCatTag(BuildContext context, String label) {
+    final colors = Theme.of(context).colorScheme;
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+      decoration: BoxDecoration(
+        color: colors.primary.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Text(
+        label,
+        style: TextStyle(
+          fontSize: 10,
+          color: colors.primary,
+          fontWeight: FontWeight.w500,
+        ),
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+      ),
+    );
+  }
+}
+
+// Original AddCatButton class remains the same
 class AddCatButton extends StatelessWidget {
   final VoidCallback onTap;
   final ColorScheme colors;
@@ -369,6 +699,7 @@ class AddCatButton extends StatelessWidget {
   }
 }
 
+// Original AddOptionsMenu class remains the same
 class AddOptionsMenu extends StatelessWidget {
   final VoidCallback onAddNewCat;
   final VoidCallback onCancel;
@@ -529,178 +860,6 @@ class AddOptionsMenu extends StatelessWidget {
             ),
           ],
         ),
-      ),
-    );
-  }
-}
-
-class CatGridCard extends StatelessWidget {
-  final Map<String, dynamic> cat;
-  final VoidCallback onTap;
-
-  const CatGridCard({
-    super.key,
-    required this.cat,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = Theme.of(context).colorScheme;
-
-    return Card(
-      elevation: 2,
-      shadowColor: colors.shadow.withOpacity(0.3),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
-      ),
-      // Use the same color brightening technique from the dashboard
-      color: Theme.of(context).brightness == Brightness.light
-          ? colors.surface.brighten(10)
-          : colors.surface.brighten(15),
-      clipBehavior: Clip.antiAlias,
-      child: InkWell(
-        onTap: onTap,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            // Cat image
-            Expanded(
-              flex: 3,
-              child: Stack(
-                fit: StackFit.expand,
-                children: [
-                  if (cat['image_url'] != null && cat['image_url'].isNotEmpty)
-                    Image.network(
-                      cat['image_url'],
-                      fit: BoxFit.cover,
-                      loadingBuilder: (context, child, loadingProgress) {
-                        if (loadingProgress == null) return child;
-                        return Center(
-                          child: CircularProgressIndicator(
-                            value: loadingProgress.expectedTotalBytes != null
-                                ? loadingProgress.cumulativeBytesLoaded /
-                                loadingProgress.expectedTotalBytes!
-                                : null,
-                            color: colors.primary,
-                          ),
-                        );
-                      },
-                      errorBuilder: (context, error, stackTrace) {
-                        return _buildPlaceholderImage(colors);
-                      },
-                    )
-                  else
-                    _buildPlaceholderImage(colors),
-
-                  // Gradient overlay for text readability
-                  Positioned(
-                    bottom: 0,
-                    left: 0,
-                    right: 0,
-                    child: Container(
-                      height: 40,
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          begin: Alignment.topCenter,
-                          end: Alignment.bottomCenter,
-                          colors: [
-                            Colors.transparent,
-                            Colors.black.withOpacity(0.7),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-
-            // Cat info
-            Expanded(
-              flex: 2,
-              child: Padding(
-                padding: const EdgeInsets.all(12),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      cat['name'] ?? 'Unknown',
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                        color: colors.onSurface,
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    const SizedBox(height: 4),
-                    Row(
-                      children: [
-                        Icon(
-                          Icons.cake,
-                          size: 14,
-                          color: colors.primary,
-                        ),
-                        const SizedBox(width: 4),
-                        Text(
-                          '${cat['age'] ?? 0} ${int.parse(cat['age'].toString()) == 1 ? 'year' : 'years'}',
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: colors.onSurface.withOpacity(0.7),
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 8),
-                    Row(
-                      children: [
-                        _buildCatTag(context, cat['breed'] ?? 'Unknown'),
-                        const SizedBox(width: 6),
-                        _buildCatTag(context, cat['gender'] ?? 'Unknown'),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildPlaceholderImage(ColorScheme colors) {
-    return Container(
-      color: colors.primary.withOpacity(0.1),
-      child: Center(
-        child: Icon(
-          Icons.pets,
-          size: 40,
-          color: colors.primary.withOpacity(0.5),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildCatTag(BuildContext context, String label) {
-    final colors = Theme.of(context).colorScheme;
-
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-      decoration: BoxDecoration(
-        color: colors.primary.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(10),
-      ),
-      child: Text(
-        label,
-        style: TextStyle(
-          fontSize: 10,
-          color: colors.primary,
-          fontWeight: FontWeight.w500,
-        ),
-        maxLines: 1,
-        overflow: TextOverflow.ellipsis,
       ),
     );
   }
