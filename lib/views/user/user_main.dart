@@ -29,9 +29,15 @@ class _UserMainState extends State<UserMain> {
   ];
   bool _isDialogOpen = false;
 
+  // Track if user is currently dragging
+  bool _isDragging = false;
+  // Store drag start position to determine direction
+  double _dragStartPosition = 0;
+
   // Define constants for page indices
   static const int kDashboardIndex = 0;
   static const int kSettingsIndex = 5;
+  static const int kChatIndex = 4;
 
   @override
   void initState() {
@@ -39,14 +45,12 @@ class _UserMainState extends State<UserMain> {
     _pageController.addListener(() {
       if (_pageController.page != null &&
           (_pageController.page?.round() ?? -1) != _selectedIndex) {
-        debugPrint('Page changed to: ${_pageController.page?.round()}');
       }
     });
   }
 
   // Pass this method to the dashboard to allow it to change tabs
   void _navigateToTab(int index) {
-    debugPrint('Navigating to tab: $index');
 
     if (mounted) {
       setState(() {
@@ -57,11 +61,7 @@ class _UserMainState extends State<UserMain> {
       if (index == kSettingsIndex || _selectedIndex == kSettingsIndex) {
         _pageController.jumpToPage(index);
       } else {
-        _pageController.animateToPage(
-          index,
-          duration: const Duration(milliseconds: 300),
-          curve: Curves.easeInOut,
-        );
+        _pageController.jumpToPage(index);
       }
     }
   }
@@ -91,6 +91,7 @@ class _UserMainState extends State<UserMain> {
     }
   }
 
+  // Updated page changed handler with swipe constraints
   void _onPageChanged(int index) {
     if (mounted) {
       setState(() {
@@ -107,7 +108,6 @@ class _UserMainState extends State<UserMain> {
       setState(() {
         _selectedIndex = kSettingsIndex;
       });
-      debugPrint('Navigated to settings page');
     }
   }
 
@@ -150,6 +150,46 @@ class _UserMainState extends State<UserMain> {
     });
   }
 
+  // Updated page swipe handler that prevents navigation between settings and chat
+  bool _handlePageSwipe(ScrollNotification notification) {
+    // For scroll start, capture the beginning position and current page
+    if (notification is ScrollStartNotification) {
+      _isDragging = true;
+      _dragStartPosition = notification.metrics.pixels;
+      return false;
+    }
+
+    // For scroll update, implement our custom swipe logic
+    if (notification is ScrollUpdateNotification && _isDragging) {
+      final currentPage = _pageController.page?.round() ?? 0;
+      final isSwipingLeft = notification.metrics.pixels > _dragStartPosition;
+
+      // Case 1: On settings page (index 5), prevent any swipe navigation
+      if (currentPage == kSettingsIndex) {
+        if (notification is ScrollUpdateNotification) {
+          _pageController.jumpToPage(kSettingsIndex);
+        }
+        return true; // Block all swipes from settings page
+      }
+
+      // Case 2: Trying to swipe to settings page
+      else if (currentPage == kChatIndex && isSwipingLeft) {
+        // Prevent swiping left to settings from chat page
+        if (notification is ScrollUpdateNotification) {
+          _pageController.jumpToPage(kChatIndex);
+        }
+        return true; // Block the scroll
+      }
+    }
+
+    // For scroll end, reset tracking
+    if (notification is ScrollEndNotification) {
+      _isDragging = false;
+    }
+
+    return false; // Allow other scrolling behavior
+  }
+
   @override
   void dispose() {
     _pageController.dispose();
@@ -160,8 +200,6 @@ class _UserMainState extends State<UserMain> {
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
     final themeProvider = Provider.of<ThemeProvider>(context);
-
-    debugPrint('Main scaffold building. Theme mode: ${Theme.of(context).brightness}, Selected index: $_selectedIndex');
 
     return Scaffold(
       appBar: PreferredSize(
@@ -219,10 +257,14 @@ class _UserMainState extends State<UserMain> {
           ),
         ),
       ),
-      body: PageView(
-        controller: _pageController,
-        onPageChanged: _onPageChanged,
-        children: _getPages(),
+      body: NotificationListener<ScrollNotification>(
+        onNotification: _handlePageSwipe,
+        child: PageView(
+          controller: _pageController,
+          onPageChanged: _onPageChanged,
+          physics: const PageScrollPhysics(), // Use basic physics, we'll handle custom behavior
+          children: _getPages(),
+        ),
       ),
       bottomNavigationBar: Container(
         decoration: BoxDecoration(
