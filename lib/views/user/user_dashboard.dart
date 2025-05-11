@@ -2,6 +2,27 @@ import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../user/user_detail_screen.dart';
 
+// Extension to adjust color brightness
+extension ColorBrightness on Color {
+  Color brighten(int amount) {
+    return Color.fromARGB(
+      alpha,
+      (red + amount).clamp(0, 255),
+      (green + amount).clamp(0, 255),
+      (blue + amount).clamp(0, 255),
+    );
+  }
+
+  Color darken(int amount) {
+    return Color.fromARGB(
+      alpha,
+      (red - amount).clamp(0, 255),
+      (green - amount).clamp(0, 255),
+      (blue - amount).clamp(0, 255),
+    );
+  }
+}
+
 class UserDataManager {
   static final UserDataManager _instance = UserDataManager._internal();
   factory UserDataManager() => _instance;
@@ -175,11 +196,14 @@ class UserCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
-    final brightness = Theme.of(context).brightness;
 
     return Card(
-      elevation: brightness == Brightness.light ? 4 : 0,
-      color: colorScheme.surface,
+      elevation: 1, // Consistent minimal elevation
+      shadowColor: colorScheme.shadow.withOpacity(0.7),
+      // Slightly adjust card color to differentiate from background
+      color: Theme.of(context).brightness == Brightness.light
+          ? colorScheme.surface.brighten(10)
+          : colorScheme.surface.brighten(15),
       margin: const EdgeInsets.all(16),
       child: InkWell(
         onTap: onTap,
@@ -264,7 +288,6 @@ class DashboardActions extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
-    final brightness = Theme.of(context).brightness;
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -298,7 +321,6 @@ class DashboardActions extends StatelessWidget {
                 description: 'Manage your cat companions',
                 color: colorScheme.primary,
                 onTap: onCatsPressed,
-                elevation: brightness == Brightness.light ? 2 : 0,
               ),
 
               // Lost & Found card
@@ -309,7 +331,6 @@ class DashboardActions extends StatelessWidget {
                 description: 'Help reunite cats with owners',
                 color: Colors.orange,
                 onTap: onLostFoundPressed,
-                elevation: brightness == Brightness.light ? 2 : 0,
               ),
 
               // News card
@@ -320,7 +341,6 @@ class DashboardActions extends StatelessWidget {
                 description: 'Latest cat care tips and news',
                 color: Colors.blue,
                 onTap: onNewsPressed,
-                elevation: brightness == Brightness.light ? 2 : 0,
               ),
 
               // Chat card
@@ -331,7 +351,6 @@ class DashboardActions extends StatelessWidget {
                 description: 'Get advice and assistance',
                 color: Colors.green,
                 onTap: onChatPressed,
-                elevation: brightness == Brightness.light ? 2 : 0,
                 showBadge: true,
               ),
 
@@ -343,7 +362,6 @@ class DashboardActions extends StatelessWidget {
                 description: 'Best practices for cat care',
                 color: Colors.purple,
                 onTap: onTipsPressed,
-                elevation: brightness == Brightness.light ? 2 : 0,
               ),
             ],
           ),
@@ -360,7 +378,6 @@ class ActionCard extends StatelessWidget {
   final String description;
   final Color color;
   final VoidCallback onTap;
-  final double elevation;
   final bool showBadge;
 
   const ActionCard({
@@ -371,7 +388,6 @@ class ActionCard extends StatelessWidget {
     required this.color,
     required this.onTap,
     required this.description,
-    this.elevation = 2,
     this.showBadge = false,
   });
 
@@ -380,8 +396,12 @@ class ActionCard extends StatelessWidget {
     final colorScheme = Theme.of(context).colorScheme;
 
     return Card(
-      elevation: elevation,
-      color: colorScheme.surface,
+      elevation: 1, // Consistent minimal elevation
+      shadowColor: colorScheme.shadow.withOpacity(0.7),
+      // Slightly adjust card color to differentiate from background
+      color: Theme.of(context).brightness == Brightness.light
+          ? colorScheme.surface.brighten(10)
+          : colorScheme.surface.brighten(15),
       child: InkWell(
         onTap: onTap,
         borderRadius: BorderRadius.circular(8),
@@ -463,6 +483,11 @@ class CatTipsDialog extends StatelessWidget {
 
     return Dialog(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      elevation: 4, // Slightly higher elevation for dialog
+      shadowColor: colorScheme.shadow.withOpacity(0.7),
+      backgroundColor: Theme.of(context).brightness == Brightness.light
+          ? colorScheme.surface.brighten(15)
+          : colorScheme.surface.brighten(20),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [

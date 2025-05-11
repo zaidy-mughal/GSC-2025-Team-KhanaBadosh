@@ -7,6 +7,7 @@ import '../user/setting_screen.dart';
 import '../user/news_screen.dart';
 import '../user/chat_screen.dart';
 import '../user/lost_and_found_screen.dart';
+import '../auth/login_screen.dart';
 
 class UserMain extends StatefulWidget {
   const UserMain({super.key});
@@ -30,11 +31,7 @@ class _UserMainState extends State<UserMain> {
   void _navigateToTab(int index) {
     setState(() {
       _selectedIndex = index;
-      _pageController.animateToPage(
-        index,
-        duration: const Duration(milliseconds: 300),
-        curve: Curves.easeInOut,
-      );
+      _pageController.jumpToPage(index);
     });
   }
 
@@ -61,7 +58,13 @@ class _UserMainState extends State<UserMain> {
   void _signOut() async {
     await Supabase.instance.client.auth.signOut();
     if (mounted) {
-      Navigator.of(context).pushReplacementNamed('/login');
+      Navigator.pushAndRemoveUntil(
+        context,
+        MaterialPageRoute(
+          builder: (context) => const LoginScreen(),
+        ),
+        (route) => false,
+      );
     }
   }
 

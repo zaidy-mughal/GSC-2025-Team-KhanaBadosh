@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:math';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart'; // Added for KeyEvent
 import 'package:google_generative_ai/google_generative_ai.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -26,11 +27,14 @@ class ChatScreen extends StatefulWidget {
 
 class _ChatScreenState extends State<ChatScreen> {
   final TextEditingController _textController = TextEditingController();
+  final FocusNode _focusNode = FocusNode(); // Added focus node for keyboard handling
   final List<ChatMessage> _messages = [];
   final ScrollController _scrollController = ScrollController();
   bool _isTyping = false;
   GenerativeModel? _model;
   ChatSession? _chatSession;
+  bool _showSuggestions = true; // Flag to control suggestion visibility
+  bool _isShiftPressed = false; // Track if Shift key is pressed
 
   // Replace with your actual API key
   static const String _apiKey = 'AIzaSyCIw-cx2kCxedSrXLQ9d-1ZDCQvOvit0aI';
@@ -100,6 +104,7 @@ How can I help you with your feline friend today?
         timestamp: DateTime.now(),
       ));
       _isTyping = true;
+      _showSuggestions = false; // Hide suggestions after user sends a message
     });
 
     _scrollToBottom();
@@ -160,10 +165,39 @@ How can I help you with your feline friend today?
     });
   }
 
+  // Function to handle message sending (for both button and Enter key)
+  void _handleSendMessage() {
+    if (_textController.text.trim().isNotEmpty) {
+      _addUserMessage(_textController.text);
+    }
+  }
+
+  // Updated key event handler using the modern KeyEvent API instead of deprecated RawKeyEvent
+  KeyEventResult _handleKeyEvent(FocusNode node, KeyEvent event) {
+    // Track shift key state
+    if (event is KeyDownEvent && event.logicalKey == LogicalKeyboardKey.shift) {
+      _isShiftPressed = true;
+    } else if (event is KeyUpEvent && event.logicalKey == LogicalKeyboardKey.shift) {
+      _isShiftPressed = false;
+    }
+
+    // Handle Enter key press - send message if Enter is pressed without Shift
+    if (event is KeyDownEvent &&
+        event.logicalKey == LogicalKeyboardKey.enter &&
+        !_isShiftPressed) {
+      _handleSendMessage();
+      return KeyEventResult.handled; // Prevent default behavior
+    }
+
+    // Let other key events be handled normally
+    return KeyEventResult.ignored;
+  }
+
   @override
   void dispose() {
     _textController.dispose();
     _scrollController.dispose();
+    _focusNode.dispose();
     super.dispose();
   }
 
@@ -176,11 +210,11 @@ How can I help you with your feline friend today?
         title: Row(
           children: [
             CircleAvatar(
-              backgroundColor: Colors.green.withOpacity(0.2),
-              child: const Icon(Icons.smart_toy, color: Colors.green),
+              backgroundColor: colorScheme.primary.withOpacity(0.2),
+              child: Icon(Icons.smart_toy, color: colorScheme.primary),
             ),
             const SizedBox(width: 12),
-            Expanded(  // Make sure this column doesn't overflow
+            Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -216,20 +250,6 @@ How can I help you with your feline friend today?
       body: SafeArea(
         child: Column(
           children: [
-            // Chat suggestion chips - wrapped in a Container with fixed height
-            if (_messages.length < 3)
-              Container(
-                constraints: const BoxConstraints(maxHeight: 150),
-                child: SingleChildScrollView(
-                  scrollDirection: Axis.horizontal,
-                  child: SuggestionChips(
-                    onSuggestionTap: (suggestion) {
-                      _addUserMessage(suggestion);
-                    },
-                  ),
-                ),
-              ),
-
             // Messages list - wrap in Expanded + Container to ensure proper rendering
             Expanded(
               child: Container(
@@ -237,13 +257,31 @@ How can I help you with your feline friend today?
                 child: ListView.builder(
                   controller: _scrollController,
                   padding: const EdgeInsets.all(8.0),
-                  itemCount: _messages.length,
+                  itemCount: _messages.length + (_showSuggestions && _messages.length == 1 ? 1 : 0),
                   itemBuilder: (context, index) {
-                    final message = _messages[index];
-                    return MessageBubble(
-                      message: message,
-                      colorScheme: colorScheme,
-                    );
+                    // If we're at the position after the first message and suggestions should be shown
+                    if (_showSuggestions && index == 1 && _messages.length == 1) {
+                      return SuggestionChips(
+                        onSuggestionTap: (suggestion) {
+                          _addUserMessage(suggestion);
+                        },
+                      );
+                    }
+
+                    // Normal message bubbles (accounting for suggestion position)
+                    final messageIndex = _showSuggestions && _messages.length == 1 && index > 1
+                        ? index - 1
+                        : index;
+
+                    if (messageIndex < _messages.length) {
+                      final message = _messages[messageIndex];
+                      return MessageBubble(
+                        message: message,
+                        colorScheme: colorScheme,
+                      );
+                    }
+
+                    return const SizedBox.shrink(); // Fallback
                   },
                 ),
               ),
@@ -257,11 +295,11 @@ How can I help you with your feline friend today?
                   children: [
                     CircleAvatar(
                       radius: 16,
-                      backgroundColor: Colors.green.withOpacity(0.2),
-                      child: const Icon(Icons.smart_toy, size: 18, color: Colors.green),
+                      backgroundColor: colorScheme.primary.withOpacity(0.2),
+                      child: Icon(Icons.smart_toy, size: 18, color: colorScheme.primary),
                     ),
                     const SizedBox(width: 8),
-                    const TypingIndicator(),
+                    TypingIndicator(colorScheme: colorScheme),
                   ],
                 ),
               ),
@@ -274,37 +312,41 @@ How can I help you with your feline friend today?
                 bottom: MediaQuery.of(context).viewInsets.bottom > 0 ? 8.0 : MediaQuery.of(context).padding.bottom + 8.0,
                 top: 8.0,
               ),
-              child: Card(
-                elevation: 2,
-                margin: EdgeInsets.zero,
-                shape: RoundedRectangleBorder(
+              child: Container(
+                decoration: BoxDecoration(
+                  color: colorScheme.surface,
                   borderRadius: BorderRadius.circular(24),
+                  border: Border.all(color: colorScheme.outline.withOpacity(0.3)),
                 ),
+                margin: EdgeInsets.zero,
                 child: Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 16.0),
                   child: Row(
                     children: [
                       Expanded(
-                        child: TextField(
-                          controller: _textController,
-                          textCapitalization: TextCapitalization.sentences,
-                          // Add these properties for multiline support
-                          maxLines: null, // Allows unlimited lines
-                          minLines: 1, // Starts with one line
-                          textInputAction: TextInputAction.newline, // Allows new lines with Enter/Return
-                          keyboardType: TextInputType.multiline, // Enables multiline keyboard
-                          decoration: const InputDecoration(
-                            hintText: "Ask about cats...",
-                            border: InputBorder.none,
-                            contentPadding: EdgeInsets.all(16),
+                        // Use KeyboardListener instead of RawKeyboardListener
+                        child: Focus(
+                          focusNode: _focusNode,
+                          onKeyEvent: _handleKeyEvent,
+                          child: TextField(
+                            controller: _textController,
+                            textCapitalization: TextCapitalization.sentences,
+                            maxLines: null, // Allow multiple lines
+                            minLines: 1, // Start with one line
+                            keyboardType: TextInputType.multiline, // Support multiline input
+                            style: TextStyle(color: colorScheme.onSurface),
+                            cursorColor: colorScheme.primary,
+                            decoration: InputDecoration(
+                              hintText: "Ask about cats...",
+                              hintStyle: TextStyle(color: colorScheme.onSurface.withOpacity(0.5),
+                                  fontSize: 14),
+                              border: InputBorder.none,
+                              contentPadding: const EdgeInsets.all(16),
+                              filled: false,
+                            ),
+                            // Do not use onEditingComplete or onSubmitted since
+                            // we're handling key events manually through KeyboardListener
                           ),
-                          // Changed to onChanged to capture input without submission
-                          onChanged: (text) {
-                            // This will be called as the user types
-                            setState(() {
-                              // You could add additional logic here if needed
-                            });
-                          },
                         ),
                       ),
                       IconButton(
@@ -312,11 +354,7 @@ How can I help you with your feline friend today?
                           Icons.send,
                           color: colorScheme.primary,
                         ),
-                        onPressed: () {
-                          if (_textController.text.trim().isNotEmpty) {
-                            _addUserMessage(_textController.text);
-                          }
-                        },
+                        onPressed: _handleSendMessage,
                       ),
                     ],
                   ),
@@ -336,7 +374,12 @@ How can I help you with your feline friend today?
       context: context,
       builder: (context) => Dialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        child: SingleChildScrollView(  // Add SingleChildScrollView here
+        elevation: 4, // Slightly higher elevation for dialog
+        shadowColor: colorScheme.shadow.withOpacity(0.7),
+        backgroundColor: Theme.of(context).brightness == Brightness.light
+            ? colorScheme.surface.brighten(15)
+            : colorScheme.surface.brighten(20),
+        child: SingleChildScrollView(
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
@@ -345,19 +388,19 @@ How can I help you with your feline friend today?
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Expanded(  // Added Expanded to prevent overflow
+                    Expanded(
                       child: Row(
                         children: [
                           Container(
                             padding: const EdgeInsets.all(12),
                             decoration: BoxDecoration(
-                              color: Colors.green.withOpacity(0.2),
+                              color: colorScheme.primary.withOpacity(0.2),
                               shape: BoxShape.circle,
                             ),
-                            child: const Icon(Icons.help_outline, color: Colors.green, size: 28),
+                            child: Icon(Icons.help_outline, color: colorScheme.primary, size: 28),
                           ),
                           const SizedBox(width: 16),
-                          const Expanded(  // Added Expanded to prevent text overflow
+                          const Expanded(
                             child: Text(
                               'Chat Help',
                               style: TextStyle(
@@ -419,13 +462,6 @@ How can I help you with your feline friend today?
                       title: 'Behavior Understanding',
                       description: 'Understand why cats behave certain ways',
                     ),
-                    const SizedBox(height: 12),
-                    _buildHelpItem(
-                      context,
-                      icon: Icons.format_bold,
-                      title: 'Rich Formatting',
-                      description: 'Responses include markdown formatting for better readability',
-                    ),
                   ],
                 ),
               ),
@@ -433,8 +469,8 @@ How can I help you with your feline friend today?
                 padding: const EdgeInsets.all(16),
                 child: ElevatedButton(
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.green,
-                    foregroundColor: Colors.white,
+                    backgroundColor: colorScheme.primary,
+                    foregroundColor: colorScheme.onPrimary,
                     minimumSize: const Size(double.infinity, 50),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12),
@@ -464,13 +500,13 @@ How can I help you with your feline friend today?
         Container(
           padding: const EdgeInsets.all(8),
           decoration: BoxDecoration(
-            color: Colors.green.withOpacity(0.1),
+            color: colorScheme.primary.withOpacity(0.1),
             shape: BoxShape.circle,
           ),
-          child: Icon(icon, size: 20, color: Colors.green),
+          child: Icon(icon, size: 20, color: colorScheme.primary),
         ),
         const SizedBox(width: 16),
-        Expanded(  // Added Expanded to prevent text overflow
+        Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -513,6 +549,11 @@ class MessageBubble extends StatelessWidget {
     final isUser = message.isUser;
     final timeFormat = TimeOfDay.fromDateTime(message.timestamp).format(context);
 
+    // Get the appropriate bubble color based on theme brightness
+    final bubbleColor = Theme.of(context).brightness == Brightness.light
+        ? colorScheme.surface.brighten(10)
+        : colorScheme.surface.brighten(15);
+
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4.0),
       child: Row(
@@ -522,37 +563,38 @@ class MessageBubble extends StatelessWidget {
           if (!isUser) ...[
             CircleAvatar(
               radius: 16,
-              backgroundColor: Colors.green.withOpacity(0.2),
-              child: const Icon(Icons.smart_toy, size: 18, color: Colors.green),
+              backgroundColor: colorScheme.primary.withOpacity(0.2),
+              child: Icon(Icons.smart_toy, size: 18, color: colorScheme.primary),
             ),
             const SizedBox(width: 8),
           ],
-          Flexible(  // Use Flexible instead of Expanded
+          Flexible(
             child: Column(
               crossAxisAlignment: isUser ? CrossAxisAlignment.end : CrossAxisAlignment.start,
               children: [
                 Container(
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                    color: isUser
-                        ? colorScheme.primary
-                        : colorScheme.surface,
+                    // Use the same color for both user and bot messages
+                    color: bubbleColor,
                     borderRadius: BorderRadius.circular(16),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.black.withOpacity(0.05),
+                        color: colorScheme.shadow.withOpacity(0.05),
                         blurRadius: 2,
                         offset: const Offset(0, 1),
                       ),
                     ],
                   ),
-                  // Use Markdown widget for bot messages, regular Text for user messages
-                  child: isUser ? Text(
+                  // Use appropriate text style based on message source
+                  child: isUser
+                      ? Text(
                     message.text,
                     style: TextStyle(
-                      color: colorScheme.onPrimary,
+                      color: colorScheme.onSurface, // Changed from onPrimary to onSurface
                     ),
-                  ) : MarkdownBody(
+                  )
+                      : MarkdownBody(
                     data: message.text,
                     styleSheet: MarkdownStyleSheet(
                       p: TextStyle(color: colorScheme.onSurface),
@@ -584,8 +626,8 @@ class MessageBubble extends StatelessWidget {
                         color: colorScheme.onSurface,
                         fontStyle: FontStyle.italic,
                       ),
-                      listBullet: const TextStyle(
-                        color: Colors.green,
+                      listBullet: TextStyle(
+                        color: colorScheme.primary,
                         fontWeight: FontWeight.bold,
                       ),
                       code: TextStyle(
@@ -624,7 +666,6 @@ class MessageBubble extends StatelessWidget {
                       ),
                       tableColumnWidth: const FlexColumnWidth(),
                       tableCellsPadding: const EdgeInsets.all(8),
-                      // Removed invalid 'table' property
                     ),
                     onTapLink: (text, href, title) {
                       if (href != null) {
@@ -662,7 +703,9 @@ class MessageBubble extends StatelessWidget {
 }
 
 class TypingIndicator extends StatefulWidget {
-  const TypingIndicator({super.key});
+  final ColorScheme colorScheme;
+
+  const TypingIndicator({super.key, required this.colorScheme});
 
   @override
   State<TypingIndicator> createState() => _TypingIndicatorState();
@@ -720,7 +763,7 @@ class _TypingIndicatorState extends State<TypingIndicator> with SingleTickerProv
           width: 8,
           height: 8,
           decoration: BoxDecoration(
-            color: Colors.green.withOpacity(0.5 + 0.5 * animation.value),
+            color: widget.colorScheme.primary.withOpacity(0.5 + 0.5 * animation.value),
             shape: BoxShape.circle,
           ),
         );
@@ -729,6 +772,7 @@ class _TypingIndicatorState extends State<TypingIndicator> with SingleTickerProv
   }
 }
 
+// Modified SuggestionChips to be horizontally scrollable
 class SuggestionChips extends StatelessWidget {
   final Function(String) onSuggestionTap;
 
@@ -739,6 +783,7 @@ class SuggestionChips extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
     final suggestions = [
       "What are signs my cat is sick?",
       "Compare Maine Coon vs Persian cats",
@@ -747,49 +792,70 @@ class SuggestionChips extends StatelessWidget {
       "How to stop scratching furniture"
     ];
 
-    return Card(
+    return Container(
       margin: const EdgeInsets.all(8),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(12.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisSize: MainAxisSize.min,  // Keep the column as small as possible
-          children: [
-            Padding(
-              padding: const EdgeInsets.only(left: 8.0, bottom: 8.0),
-              child: Text(
-                "Try asking about:",
-                style: TextStyle(
-                  fontWeight: FontWeight.bold,
-                  color: Theme.of(context).colorScheme.onSurface,
-                ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const SizedBox(height: 30),
+          Padding(
+            padding: const EdgeInsets.only(bottom: 8.0, left: 4.0),
+            child: Text(
+              "Try asking about:",
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+                color: colorScheme.onSurface,
               ),
             ),
-            SingleChildScrollView(  // Add horizontal scrolling capability
-              scrollDirection: Axis.horizontal,
-              child: Row(  // Change Wrap to Row with SingleChildScrollView
-                children: suggestions.map((suggestion) {
-                  return Padding(
-                    padding: const EdgeInsets.only(right: 8.0),
-                    child: ActionChip(
-                      label: Text(suggestion),
-                      avatar: Icon(
-                        Icons.pets,
-                        size: 16,
-                        color: Theme.of(context).colorScheme.primary,
-                      ),
-                      onPressed: () => onSuggestionTap(suggestion),
+          ),
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Row(
+              children: suggestions.map((suggestion) {
+                return Padding(
+                  padding: const EdgeInsets.only(right: 8.0),
+                  child: ActionChip(
+                    backgroundColor: colorScheme.primary.withOpacity(0.1), // Restored background color
+                    side: BorderSide(color: colorScheme.primary.withOpacity(0.3)),
+                    label: Text(
+                      suggestion,
+                      style: TextStyle(color: colorScheme.primary),
                     ),
-                  );
-                }).toList(),
-              ),
+                    avatar: Icon(
+                      Icons.pets,
+                      size: 16,
+                      color: colorScheme.primary,
+                    ),
+                    padding: const EdgeInsets.symmetric(horizontal: 4),
+                    onPressed: () => onSuggestionTap(suggestion),
+                  ),
+                );
+              }).toList(),
             ),
-          ],
-        ),
+          ),
+        ],
       ),
+    );
+  }
+}
+
+// Extension to adjust color brightness (added from user_dashboard.dart)
+extension ColorBrightness on Color {
+  Color brighten(int amount) {
+    return Color.fromARGB(
+      alpha,
+      (red + amount).clamp(0, 255),
+      (green + amount).clamp(0, 255),
+      (blue + amount).clamp(0, 255),
+    );
+  }
+
+  Color darken(int amount) {
+    return Color.fromARGB(
+      alpha,
+      (red - amount).clamp(0, 255),
+      (green - amount).clamp(0, 255),
+      (blue - amount).clamp(0, 255),
     );
   }
 }
