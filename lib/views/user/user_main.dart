@@ -1,13 +1,13 @@
 import 'package:flutter/material.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
-import '../../widgets/theme_toggle.dart';
+import 'package:provider/provider.dart';
+import '../../core/theme/theme_provider.dart';
 import '../user/user_dashboard.dart';
 import '../user/user_cats_screen.dart';
-import '../user/setting_screen.dart';
 import '../user/news_screen.dart';
 import '../user/chat_screen.dart';
 import '../user/lost_and_found_screen.dart';
-import '../auth/login_screen.dart';
+import 'settings_dialog.dart';
+import 'settings_screen.dart';
 
 class UserMain extends StatefulWidget {
   const UserMain({super.key});
@@ -24,15 +24,46 @@ class _UserMainState extends State<UserMain> {
     'Cats',
     'Lost & Found',
     'News',
-    'Chat'
+    'Chat',
+    'Settings'
   ];
+  bool _isDialogOpen = false;
+
+  // Define constants for page indices
+  static const int kDashboardIndex = 0;
+  static const int kSettingsIndex = 5;
+
+  @override
+  void initState() {
+    super.initState();
+    _pageController.addListener(() {
+      if (_pageController.page != null &&
+          (_pageController.page?.round() ?? -1) != _selectedIndex) {
+        debugPrint('Page changed to: ${_pageController.page?.round()}');
+      }
+    });
+  }
 
   // Pass this method to the dashboard to allow it to change tabs
   void _navigateToTab(int index) {
-    setState(() {
-      _selectedIndex = index;
-      _pageController.jumpToPage(index);
-    });
+    debugPrint('Navigating to tab: $index');
+
+    if (mounted) {
+      setState(() {
+        _selectedIndex = index;
+      });
+
+      // Prevent animation to/from settings page
+      if (index == kSettingsIndex || _selectedIndex == kSettingsIndex) {
+        _pageController.jumpToPage(index);
+      } else {
+        _pageController.animateToPage(
+          index,
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.easeInOut,
+        );
+      }
+    }
   }
 
   List<Widget> _getPages() {
@@ -42,30 +73,81 @@ class _UserMainState extends State<UserMain> {
       const LostAndFoundScreen(),
       const NewsScreen(),
       const ChatScreen(),
+      const SettingsScreen(),
     ];
   }
 
   void _onItemTapped(int index) {
-    _navigateToTab(index);
+    // If already on dashboard and dashboard is tapped again
+    if (index == kDashboardIndex && _selectedIndex == kDashboardIndex) {
+      // Could add "scroll to top" or refresh functionality here
+      _pageController.jumpToPage(kDashboardIndex);
+      return;
+    }
+
+    // Don't navigate to settings from bottom nav - settings is only accessible from dialog
+    if (index < kSettingsIndex) {
+      _navigateToTab(index);
+    }
   }
 
   void _onPageChanged(int index) {
-    setState(() {
-      _selectedIndex = index;
-    });
+    if (mounted) {
+      setState(() {
+        // Only update selected index for non-settings pages
+        _selectedIndex = index < kSettingsIndex ? index : kDashboardIndex;
+      });
+    }
   }
 
-  void _signOut() async {
-    await Supabase.instance.client.auth.signOut();
+  void _navigateToSettingsPage() {
     if (mounted) {
-      Navigator.pushAndRemoveUntil(
-        context,
-        MaterialPageRoute(
-          builder: (context) => const LoginScreen(),
-        ),
-        (route) => false,
-      );
+      // Use jumpToPage to ensure immediate transition without animation
+      _pageController.jumpToPage(kSettingsIndex);
+      setState(() {
+        _selectedIndex = kSettingsIndex;
+      });
+      debugPrint('Navigated to settings page');
     }
+  }
+
+  void _showSettingsDialog() {
+    setState(() {
+      _isDialogOpen = true;
+    });
+
+    showDialog(
+      context: context,
+      barrierDismissible: true,
+      builder: (BuildContext dialogContext) => SettingsDialog(
+        onClose: () {
+          Navigator.of(dialogContext).pop();
+          if (mounted) {
+            setState(() {
+              _isDialogOpen = false;
+            });
+          }
+        },
+        onNavigateToSettings: (_) {
+          Navigator.of(dialogContext).pop();
+          if (mounted) {
+            setState(() {
+              _isDialogOpen = false;
+            });
+
+            // Navigate to settings page after dialog is closed
+            _navigateToSettingsPage();
+          }
+        },
+      ),
+    ).then((_) {
+      // In case dialog is dismissed by tapping outside
+      if (mounted && _isDialogOpen) {
+        setState(() {
+          _isDialogOpen = false;
+        });
+      }
+    });
   }
 
   @override
@@ -77,7 +159,9 @@ class _UserMainState extends State<UserMain> {
   @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
-    final textTheme = Theme.of(context).textTheme;
+    final themeProvider = Provider.of<ThemeProvider>(context);
+
+    debugPrint('Main scaffold building. Theme mode: ${Theme.of(context).brightness}, Selected index: $_selectedIndex');
 
     return Scaffold(
       appBar: PreferredSize(
@@ -100,8 +184,15 @@ class _UserMainState extends State<UserMain> {
             ),
           ),
           child: AppBar(
+            leading: IconButton(
+              icon: Icon(
+                _isDialogOpen ? Icons.close : Icons.menu,
+                color: colors.onSurface,
+              ),
+              onPressed: _showSettingsDialog,
+            ),
             title: Text(
-              _titles[_selectedIndex],
+              _selectedIndex < _titles.length ? _titles[_selectedIndex] : _titles[0],
               style: TextStyle(
                 fontWeight: FontWeight.bold,
                 fontSize: 20,
@@ -111,165 +202,25 @@ class _UserMainState extends State<UserMain> {
             elevation: 0,
             backgroundColor: colors.surface,
             centerTitle: true,
-            actions: const [
-              Padding(
-                padding: EdgeInsets.only(right: 8.0),
-                child: ThemeToggle(),
-              )
+            actions: [
+              // Theme toggle with sun/moon icon
+              IconButton(
+                icon: Icon(
+                  themeProvider.themeMode == ThemeMode.dark
+                      ? Icons.light_mode  // Sun icon for light mode
+                      : Icons.dark_mode,  // Moon icon for dark mode
+                  color: colors.onSurface,
+                ),
+                onPressed: () {
+                  themeProvider.toggleTheme();
+                },
+              ),
             ],
           ),
         ),
       ),
-      drawer: Drawer(
-        elevation: 2,
-        child: Column(
-          children: [
-            Container(
-              height: 180,
-              width: double.infinity,
-              decoration: BoxDecoration(
-                color: colors.primary,
-                boxShadow: [
-                  BoxShadow(
-                    color: colors.shadow.withOpacity(0.2),
-                    blurRadius: 10,
-                    offset: const Offset(0, 5),
-                  ),
-                ],
-              ),
-              child: SafeArea(
-                child: Padding(
-                  padding: const EdgeInsets.all(16.0),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisAlignment: MainAxisAlignment.end,
-                    children: [
-                      CircleAvatar(
-                        radius: 36,
-                        backgroundColor: colors.onPrimary.withOpacity(0.2),
-                        child: Icon(
-                          Icons.person,
-                          size: 36,
-                          color: colors.onPrimary,
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-                      Text(
-                        'Cat Shelter App',
-                        style: TextStyle(
-                          color: colors.onPrimary,
-                          fontSize: 22,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      Text(
-                        'User Menu',
-                        style: TextStyle(
-                          color: colors.onPrimary.withOpacity(0.8),
-                          fontSize: 14,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-            Expanded(
-              child: ListView(
-                padding: EdgeInsets.zero,
-                children: [
-                  const SizedBox(height: 8),
-                  _buildDrawerItem(
-                    context,
-                    icon: Icons.dashboard_rounded,
-                    title: 'Dashboard',
-                    index: 0,
-                    colors: colors,
-                  ),
-                  _buildDrawerItem(
-                    context,
-                    icon: Icons.pets_rounded,
-                    title: 'Cats',
-                    index: 1,
-                    colors: colors,
-                  ),
-                  _buildDrawerItem(
-                    context,
-                    icon: Icons.search_rounded,
-                    title: 'Lost & Found',
-                    index: 2,
-                    colors: colors,
-                  ),
-                  _buildDrawerItem(
-                    context,
-                    icon: Icons.newspaper_rounded,
-                    title: 'News',
-                    index: 3,
-                    colors: colors,
-                  ),
-                  _buildDrawerItem(
-                    context,
-                    icon: Icons.chat_rounded,
-                    title: 'Chat',
-                    index: 4,
-                    colors: colors,
-                  ),
-                  const Divider(thickness: 1),
-                  ListTile(
-                    leading: Icon(
-                      Icons.settings_rounded,
-                      color: colors.primary,
-                      size: 24,
-                    ),
-                    title: Text(
-                      'Settings',
-                      style: TextStyle(
-                        color: colors.onSurface,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                    onTap: () {
-                      Navigator.pop(context); // Close drawer
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => const SettingsScreen(),
-                        ),
-                      );
-                    },
-                  ),
-                ],
-              ),
-            ),
-            // Logout button at the bottom
-            Container(
-              decoration: BoxDecoration(
-                border: Border(
-                  top: BorderSide(color: colors.outlineVariant, width: 0.5),
-                ),
-              ),
-              child: ListTile(
-                leading: Icon(
-                  Icons.logout_rounded,
-                  color: colors.error,
-                  size: 24,
-                ),
-                title: Text(
-                  'Logout',
-                  style: TextStyle(
-                    color: colors.error,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-                onTap: _signOut,
-              ),
-            ),
-          ],
-        ),
-      ),
       body: PageView(
         controller: _pageController,
-        physics: const BouncingScrollPhysics(),
         onPageChanged: _onPageChanged,
         children: _getPages(),
       ),
@@ -285,7 +236,7 @@ class _UserMainState extends State<UserMain> {
         ),
         child: BottomNavigationBar(
           type: BottomNavigationBarType.fixed,
-          currentIndex: _selectedIndex,
+          currentIndex: _selectedIndex < kSettingsIndex ? _selectedIndex : kDashboardIndex, // Keep Dashboard selected if on settings
           backgroundColor: colors.surface,
           selectedItemColor: colors.primary,
           unselectedItemColor: colors.onSurface.withOpacity(0.6),
@@ -324,40 +275,6 @@ class _UserMainState extends State<UserMain> {
           ],
         ),
       ),
-    );
-  }
-
-  Widget _buildDrawerItem(
-      BuildContext context, {
-        required IconData icon,
-        required String title,
-        required int index,
-        required ColorScheme colors,
-      }) {
-    final isSelected = _selectedIndex == index;
-    return ListTile(
-      contentPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 4),
-      leading: Icon(
-        icon,
-        color: isSelected ? colors.primary : colors.onSurface.withOpacity(0.7),
-        size: 24,
-      ),
-      title: Text(
-        title,
-        style: TextStyle(
-          color: isSelected ? colors.primary : colors.onSurface,
-          fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
-        ),
-      ),
-      selected: isSelected,
-      selectedTileColor: colors.primaryContainer.withOpacity(0.2),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(8),
-      ),
-      onTap: () {
-        Navigator.pop(context); // Close drawer
-        _navigateToTab(index);
-      },
     );
   }
 }
