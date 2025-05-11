@@ -243,17 +243,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   },
                 ),
 
-                // Licenses
-                _buildSettingItem(
-                  icon: Icons.library_books,
-                  title: 'Licenses',
-                  iconColor: Colors.purple,
-                  onTap: () {
-                    // Navigate to licenses screen
-                    debugPrint('Licenses tapped');
-                  },
-                ),
-
                 Padding(
                   padding: const EdgeInsets.symmetric(vertical: 16),
                   child: Divider(height: 1, color: colorScheme.onSurface.withOpacity(0.2)),
