@@ -9,7 +9,7 @@ class CatDetailScreen extends StatelessWidget {
     required this.cat,
   });
 
-  Widget _infoRow(String label, String? value, ColorScheme colors) {
+  Widget _infoRow(String label, String? value, ColorScheme colors, {bool multiLine = false}) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 10.0),
       child: Column(
@@ -31,6 +31,8 @@ class CatDetailScreen extends StatelessWidget {
               fontWeight: FontWeight.w600,
               color: colors.onSurface,
             ),
+            maxLines: multiLine ? 5 : 1,
+            overflow: multiLine ? TextOverflow.ellipsis : TextOverflow.ellipsis,
           ),
           const SizedBox(height: 8),
           Divider(height: 1, color: colors.onSurface.withOpacity(0.2)),
@@ -92,12 +94,8 @@ class CatDetailScreen extends StatelessWidget {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(
-          cat['name'] ?? 'Cat Details',
-          style: TextStyle(color: colors.onPrimary),
-        ),
-        backgroundColor: colors.primary,
-        iconTheme: IconThemeData(color: colors.onPrimary),
+        backgroundColor: colors.primary.withOpacity(0.1),
+        iconTheme: IconThemeData(color: colors.primary),
         actions: [
           IconButton(
             icon: const Icon(Icons.delete_outline),
@@ -108,95 +106,65 @@ class CatDetailScreen extends StatelessWidget {
       ),
       body: SingleChildScrollView(
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Cat image header
-            if (cat['image_url'] != null && cat['image_url'].isNotEmpty)
-              Hero(
-                tag: 'cat-image-${cat['id']}',
-                child: SizedBox(
-                  height: 250,
-                  width: double.infinity,
-                  child: Image.network(
-                    cat['image_url'],
-                    fit: BoxFit.cover,
-                    loadingBuilder: (context, child, loadingProgress) {
-                      if (loadingProgress == null) return child;
-                      return Center(
-                        child: CircularProgressIndicator(
-                          value: loadingProgress.expectedTotalBytes != null
-                              ? loadingProgress.cumulativeBytesLoaded /
-                              loadingProgress.expectedTotalBytes!
-                              : null,
-                          color: colors.primary,
-                        ),
-                      );
-                    },
-                    errorBuilder: (context, error, stackTrace) {
-                      return Container(
-                        color: colors.primary.withOpacity(0.1),
-                        child: Center(
-                          child: Icon(
-                            Icons.broken_image,
-                            size: 60,
-                            color: colors.primary.withOpacity(0.5),
-                          ),
-                        ),
-                      );
-                    },
-                  ),
-                ),
-              )
-            else
-              Container(
-                height: 180,
-                width: double.infinity,
-                color: colors.primary.withOpacity(0.1),
-                child: Center(
-                  child: Icon(
-                    Icons.pets,
-                    size: 70,
-                    color: colors.primary.withOpacity(0.5),
-                  ),
-                ),
-              ),
-
-            // Cat name header
+            // Profile header with image
             Container(
               width: double.infinity,
               color: colors.primary.withOpacity(0.1),
-              padding: const EdgeInsets.all(16),
+              padding: const EdgeInsets.all(24.0),
               child: Column(
-                crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
+                  Hero(
+                    tag: 'cat_image_${cat['id']}',
+                    child: CircleAvatar(
+                      radius: 60,
+                      backgroundColor: colors.primary.withOpacity(0.3),
+                      backgroundImage: cat['image_url'] != null &&
+                          cat['image_url'].isNotEmpty
+                          ? NetworkImage(cat['image_url'])
+                          : null,
+                      child: cat['image_url'] == null ||
+                          cat['image_url'].isEmpty
+                          ? Icon(
+                        Icons.pets,
+                        size: 60,
+                        color: colors.primary,
+                      )
+                          : null,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
                   Text(
                     cat['name'] ?? 'Unknown',
                     style: TextStyle(
-                      fontSize: 28,
+                      fontSize: 24,
                       fontWeight: FontWeight.bold,
                       color: colors.onSurface,
                     ),
                   ),
-                  const SizedBox(height: 6),
-                  Text(
-                    cat['breed'] ?? 'Unknown breed',
-                    style: TextStyle(
-                      fontSize: 16,
-                      color: colors.onSurface.withOpacity(0.7),
+                  if (cat['breed'] != null && cat['breed'].isNotEmpty)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 8.0),
+                      child: Text(
+                        cat['breed'],
+                        style: TextStyle(
+                          fontSize: 16,
+                          color: colors.onSurface.withOpacity(0.7),
+                        ),
+                      ),
                     ),
-                  ),
                 ],
               ),
             ),
 
-            // Cat details
+            // Cat information
             Padding(
-              padding: const EdgeInsets.all(16),
+              padding: const EdgeInsets.all(16.0),
               child: Card(
                 elevation: 2,
                 color: colors.surface,
                 child: Padding(
-                  padding: const EdgeInsets.all(16),
+                  padding: const EdgeInsets.all(16.0),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -209,26 +177,22 @@ class CatDetailScreen extends StatelessWidget {
                         ),
                       ),
                       const SizedBox(height: 16),
-                      _infoRow('Name', cat['name'], colors),
-                      _infoRow('Breed', cat['breed'], colors),
+                      _infoRow("Name", cat['name'], colors),
+                      _infoRow("Breed", cat['breed'], colors),
                       _infoRow(
-                          'Age',
+                          "Age",
                           '${cat['age']} ${int.parse(cat['age'].toString()) == 1 ? 'year' : 'years'} old',
                           colors
                       ),
-                      _infoRow('Gender', cat['gender'], colors),
-                      _infoRow('Color', cat['color'], colors),
-                      if (cat['created_at'] != null)
-                        _infoRow(
-                            'Added on',
-                            DateTime.parse(cat['created_at']).toString().split('.')[0],
-                            colors
-                        ),
+                      _infoRow("Gender", cat['gender'], colors),
+                      _infoRow("Color", cat['color'], colors),
                     ],
                   ),
                 ),
               ),
             ),
+
+            const SizedBox(height: 20),
           ],
         ),
       ),

@@ -84,7 +84,7 @@ class UserDataManager {
       lastFetched = DateTime.now();
     } catch (e) {
       // Handle any errors here if needed
-      print('Error fetching user data: $e');
+      debugPrint('Error fetching user data: $e');
     }
   }
 

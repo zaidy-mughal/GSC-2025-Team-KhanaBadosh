@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import '../user/user_main.dart';
+import 'cat_detail_screen.dart';
 
 class CatDashboard extends StatefulWidget {
   final Map<String, dynamic> cat;
@@ -23,28 +25,30 @@ class _CatDashboardState extends State<CatDashboard> with AutomaticKeepAliveClie
   Widget build(BuildContext context) {
     super.build(context); // Required for AutomaticKeepAliveClientMixin
     final colors = Theme.of(context).colorScheme;
-    final size = MediaQuery.of(context).size;
 
     return Scaffold(
       body: SingleChildScrollView(
-        padding: const EdgeInsets.only(bottom: 24),
+        physics: const AlwaysScrollableScrollPhysics(),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Cat profile header
+            // Cat profile header - kept as is
             _buildProfileHeader(colors),
 
-            // Stats overview section
-            _buildStatsOverview(colors),
+            const SizedBox(height: 20),
 
-            // Quick action buttons
+            // Divider
+            Divider(
+              color: colors.onSurface.withOpacity(0.2),
+              thickness: 1,
+              indent: 16,
+              endIndent: 16,
+            ),
+            const SizedBox(height: 20),
+
+            // Quick actions with grid layout like user_dashboard
             _buildQuickActions(colors),
-
-            // Health summary section
-            _buildHealthSummary(colors),
-
-            // Collar tag section
-            _buildCollarTagSection(colors),
+            const SizedBox(height: 20),
           ],
         ),
       ),
@@ -64,39 +68,49 @@ class _CatDashboardState extends State<CatDashboard> with AutomaticKeepAliveClie
       ),
       child: Column(
         children: [
-          // Cat avatar
-          Hero(
-            tag: 'cat_image_${widget.cat['id']}',
-            child: Container(
-              width: 120,
-              height: 120,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                border: Border.all(
-                  color: colors.primary,
-                  width: 4,
+          // Cat avatar with tap navigation to details
+          GestureDetector(
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => CatDetailScreen(cat: widget.cat),
                 ),
-                boxShadow: [
-                  BoxShadow(
-                    color: colors.shadow.withOpacity(0.2),
-                    blurRadius: 10,
-                    offset: const Offset(0, 5),
+              );
+            },
+            child: Hero(
+              tag: 'cat_image_${widget.cat['id']}',
+              child: Container(
+                width: 120,
+                height: 120,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  border: Border.all(
+                    color: colors.primary,
+                    width: 4,
                   ),
-                ],
-                image: widget.cat['image_url'] != null && widget.cat['image_url'].isNotEmpty
-                    ? DecorationImage(
-                  image: NetworkImage(widget.cat['image_url']),
-                  fit: BoxFit.cover,
+                  boxShadow: [
+                    BoxShadow(
+                      color: colors.shadow.withOpacity(0.2),
+                      blurRadius: 10,
+                      offset: const Offset(0, 5),
+                    ),
+                  ],
+                  image: widget.cat['image_url'] != null && widget.cat['image_url'].isNotEmpty
+                      ? DecorationImage(
+                    image: NetworkImage(widget.cat['image_url']),
+                    fit: BoxFit.cover,
+                  )
+                      : null,
+                ),
+                child: widget.cat['image_url'] == null || widget.cat['image_url'].isEmpty
+                    ? Icon(
+                  Icons.pets,
+                  size: 60,
+                  color: colors.primary,
                 )
                     : null,
               ),
-              child: widget.cat['image_url'] == null || widget.cat['image_url'].isEmpty
-                  ? Icon(
-                Icons.pets,
-                size: 60,
-                color: colors.primary,
-              )
-                  : null,
             ),
           ),
           const SizedBox(height: 16),
@@ -110,6 +124,8 @@ class _CatDashboardState extends State<CatDashboard> with AutomaticKeepAliveClie
               color: colors.onSurface,
             ),
           ),
+
+          const SizedBox(height: 8),
 
           // Cat details
           Row(
@@ -170,106 +186,9 @@ class _CatDashboardState extends State<CatDashboard> with AutomaticKeepAliveClie
     );
   }
 
-  Widget _buildStatsOverview(ColorScheme colors) {
-    return Container(
-      margin: const EdgeInsets.all(16),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Theme.of(context).brightness == Brightness.light
-            ? colors.surface
-            : colors.surface.withOpacity(0.8),
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: colors.shadow.withOpacity(0.1),
-            blurRadius: 8,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'Stats Overview',
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-              color: colors.onSurface,
-            ),
-          ),
-          const SizedBox(height: 16),
-          Row(
-            children: [
-              Expanded(
-                child: _buildStatItem(
-                  colors,
-                  'Weight',
-                  '${widget.cat['weight'] ?? '5.2'} kg',
-                  Icons.monitor_weight_rounded,
-                ),
-              ),
-              Expanded(
-                child: _buildStatItem(
-                  colors,
-                  'Height',
-                  '${widget.cat['height'] ?? '25'} cm',
-                  Icons.height_rounded,
-                ),
-              ),
-              Expanded(
-                child: _buildStatItem(
-                  colors,
-                  'Length',
-                  '${widget.cat['length'] ?? '45'} cm',
-                  Icons.straighten_rounded,
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildStatItem(ColorScheme colors, String label, String value, IconData icon) {
-    return Column(
-      children: [
-        Container(
-          padding: const EdgeInsets.all(12),
-          decoration: BoxDecoration(
-            color: colors.primary.withOpacity(0.1),
-            shape: BoxShape.circle,
-          ),
-          child: Icon(
-            icon,
-            color: colors.primary,
-            size: 24,
-          ),
-        ),
-        const SizedBox(height: 8),
-        Text(
-          value,
-          style: TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.bold,
-            color: colors.onSurface,
-          ),
-        ),
-        Text(
-          label,
-          style: TextStyle(
-            fontSize: 12,
-            color: colors.onSurface.withOpacity(0.7),
-          ),
-        ),
-      ],
-    );
-  }
-
   Widget _buildQuickActions(ColorScheme colors) {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -284,346 +203,200 @@ class _CatDashboardState extends State<CatDashboard> with AutomaticKeepAliveClie
               ),
             ),
           ),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+          GridView.count(
+            physics: const NeverScrollableScrollPhysics(),
+            shrinkWrap: true,
+            crossAxisCount: 2,
+            crossAxisSpacing: 12,
+            mainAxisSpacing: 12,
+            childAspectRatio: 1.2,
             children: [
-              _buildActionButton(
-                colors,
-                'Edit Profile',
-                Icons.edit_rounded,
-                onTap: () {},
+              // Back to User Dashboard card
+              ActionCard(
+                icon: Icons.home,
+                title: 'User Dashboard',
+                value: 'Back to User Account',
+                description: 'Return to user profile',
+                color: colors.primary,
+                onTap: () {
+                  Navigator.of(context).pushReplacement(
+                    MaterialPageRoute(
+                      builder: (context) => const UserMain(),
+                    ),
+                  );
+                },
               ),
-              _buildActionButton(
-                colors,
-                'Add Record',
-                Icons.add_chart_rounded,
+
+              // Health Records card
+              ActionCard(
+                icon: Icons.medical_services,
+                title: 'Health Records',
+                value: 'Medical History',
+                description: 'View and add health records',
+                color: Colors.blue,
                 onTap: () => widget.onNavigateToTab(2), // Navigate to Health tab
               ),
-              _buildActionButton(
-                colors,
-                'View Tag',
-                Icons.qr_code_scanner_rounded,
+
+              // Collar Tag card
+              ActionCard(
+                icon: Icons.qr_code,
+                title: 'Collar Tag',
+                value: 'QR Code Access',
+                description: 'View and share tag information',
+                color: Colors.orange,
                 onTap: () => widget.onNavigateToTab(1), // Navigate to Collar Tag tab
               ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
 
-  Widget _buildActionButton(
-      ColorScheme colors,
-      String label,
-      IconData icon, {
-        required VoidCallback onTap,
-      }) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(16),
-      child: Container(
-        width: 90,
-        padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 8),
-        decoration: BoxDecoration(
-          color: colors.primary.withOpacity(0.1),
-          borderRadius: BorderRadius.circular(16),
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(
-              icon,
-              color: colors.primary,
-              size: 28,
-            ),
-            const SizedBox(height: 8),
-            Text(
-              label,
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.w500,
-                color: colors.onSurface,
+              // Report Lost Cat card
+              ActionCard(
+                icon: Icons.report_problem,
+                title: 'Report Lost',
+                value: 'Lost Cat Alert',
+                description: 'Report your cat as missing',
+                color: Colors.red,
+                onTap: () => widget.onNavigateToTab(3), // Navigate to Report Lost tab
               ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
 
-  Widget _buildHealthSummary(ColorScheme colors) {
-    return Container(
-      margin: const EdgeInsets.all(16),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Theme.of(context).brightness == Brightness.light
-            ? colors.surface
-            : colors.surface.withOpacity(0.8),
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: colors.shadow.withOpacity(0.1),
-            blurRadius: 8,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                'Health Summary',
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: colors.onSurface,
-                ),
-              ),
-              InkWell(
-                onTap: () => widget.onNavigateToTab(2), // Navigate to Health
-                borderRadius: BorderRadius.circular(20),
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                  decoration: BoxDecoration(
-                    color: colors.primary.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: Row(
-                    children: [
-                      Text(
-                        'Details',
-                        style: TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w500,
-                          color: colors.primary,
-                        ),
-                      ),
-                      const SizedBox(width: 4),
-                      Icon(
-                        Icons.arrow_forward_ios_rounded,
-                        size: 12,
-                        color: colors.primary,
-                      ),
-                    ],
-                  ),
-                ),
+              // Sell My Cat card
+              ActionCard(
+                icon: Icons.sell,
+                title: 'Sell My Cat',
+                value: 'Find New Home',
+                description: 'Create listing to sell your cat',
+                color: Colors.amber,
+                onTap: () {
+                  // Add sell cat functionality here
+                },
+                showBadge: true,
               ),
             ],
           ),
-          const SizedBox(height: 16),
-          _buildHealthItem(
-            colors,
-            'Vaccination Status',
-            'Up to date',
-            Icons.verified_rounded,
-            true,
-          ),
-          const SizedBox(height: 12),
-          _buildHealthItem(
-            colors,
-            'Last Vet Visit',
-            'March 15, 2025',
-            Icons.calendar_today_rounded,
-            true,
-          ),
-          const SizedBox(height: 12),
-          _buildHealthItem(
-            colors,
-            'Next Checkup',
-            'June 15, 2025',
-            Icons.event_available_rounded,
-            false,
-          ),
         ],
       ),
     );
   }
+}
 
-  Widget _buildHealthItem(
-      ColorScheme colors,
-      String label,
-      String value,
-      IconData icon,
-      bool isPositive,
-      ) {
-    return Row(
-      children: [
-        Container(
-          padding: const EdgeInsets.all(8),
-          decoration: BoxDecoration(
-            color: isPositive ? colors.primary.withOpacity(0.1) : colors.error.withOpacity(0.1),
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: Icon(
-            icon,
-            color: isPositive ? colors.primary : colors.error,
-            size: 20,
-          ),
-        ),
-        const SizedBox(width: 12),
-        Expanded(
+class ActionCard extends StatelessWidget {
+  final IconData icon;
+  final String title;
+  final String value;
+  final String description;
+  final Color color;
+  final VoidCallback onTap;
+  final bool showBadge;
+
+  const ActionCard({
+    super.key,
+    required this.icon,
+    required this.title,
+    required this.value,
+    required this.color,
+    required this.onTap,
+    required this.description,
+    this.showBadge = false,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+
+    return Card(
+      elevation: 1, // Consistent minimal elevation
+      shadowColor: colorScheme.shadow.withOpacity(0.7),
+      // Slightly adjust card color to differentiate from background
+      color: Theme.of(context).brightness == Brightness.light
+          ? colorScheme.surface.brighten(10)
+          : colorScheme.surface.brighten(15),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(8),
+        child: Padding(
+          padding: const EdgeInsets.all(16.0),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Container(
+                    decoration: BoxDecoration(
+                      color: color.withOpacity(0.2),
+                      shape: BoxShape.circle,
+                    ),
+                    padding: const EdgeInsets.all(8),
+                    child: Icon(icon, color: color, size: 20),
+                  ),
+                  if (showBadge)
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: Colors.red,
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: const Text(
+                        'New',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 10,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+              const SizedBox(height: 8),
               Text(
-                label,
+                title,
                 style: TextStyle(
                   fontSize: 14,
-                  color: colors.onSurface.withOpacity(0.7),
+                  fontWeight: FontWeight.bold,
+                  color: colorScheme.onSurface,
                 ),
               ),
               Text(
                 value,
                 style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600,
-                  color: colors.onSurface,
+                  fontSize: 12,
+                  color: colorScheme.onSurface.withOpacity(0.7),
                 ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                description,
+                style: TextStyle(
+                  fontSize: 10,
+                  color: colorScheme.onSurface.withOpacity(0.5),
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
               ),
             ],
           ),
         ),
-      ],
+      ),
+    );
+  }
+}
+
+// Extension to adjust color brightness (copied from user_dashboard.dart)
+extension ColorBrightness on Color {
+  Color brighten(int amount) {
+    return Color.fromARGB(
+      alpha,
+      (red + amount).clamp(0, 255),
+      (green + amount).clamp(0, 255),
+      (blue + amount).clamp(0, 255),
     );
   }
 
-  Widget _buildCollarTagSection(ColorScheme colors) {
-    return Container(
-      margin: const EdgeInsets.all(16),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Theme.of(context).brightness == Brightness.light
-            ? colors.surface
-            : colors.surface.withOpacity(0.8),
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: colors.shadow.withOpacity(0.1),
-            blurRadius: 8,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                'Collar Tag',
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: colors.onSurface,
-                ),
-              ),
-              InkWell(
-                onTap: () => widget.onNavigateToTab(1), // Navigate to Collar Tag
-                borderRadius: BorderRadius.circular(20),
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                  decoration: BoxDecoration(
-                    color: colors.primary.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: Row(
-                    children: [
-                      Text(
-                        'View',
-                        style: TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w500,
-                          color: colors.primary,
-                        ),
-                      ),
-                      const SizedBox(width: 4),
-                      Icon(
-                        Icons.arrow_forward_ios_rounded,
-                        size: 12,
-                        color: colors.primary,
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 16),
-          Row(
-            children: [
-              Container(
-                width: 80,
-                height: 80,
-                decoration: BoxDecoration(
-                  color: colors.primary.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                child: Icon(
-                  Icons.qr_code_rounded,
-                  size: 50,
-                  color: colors.primary,
-                ),
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Smart Tag Status',
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                        color: colors.onSurface,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: colors.primary.withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(
-                            Icons.check_circle_rounded,
-                            size: 14,
-                            color: colors.primary,
-                          ),
-                          const SizedBox(width: 4),
-                          Text(
-                            'Active',
-                            style: TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.w500,
-                              color: colors.primary,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      'Scan to access pet information',
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: colors.onSurface.withOpacity(0.7),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
+  Color darken(int amount) {
+    return Color.fromARGB(
+      alpha,
+      (red - amount).clamp(0, 255),
+      (green - amount).clamp(0, 255),
+      (blue - amount).clamp(0, 255),
     );
   }
 }

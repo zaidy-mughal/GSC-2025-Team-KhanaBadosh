@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../core/theme/theme_provider.dart';
-import '../cat/cat_dashboard.dart';
-import '../cat/collar_tag_screen.dart';
-import '../cat/health_screen.dart';
-import '../cat/report_lost_screen.dart'; // Add this new import
+import 'cat_dashboard.dart';
+import 'collar_tag_screen.dart';
+import 'health_screen.dart';
+import 'report_lost_screen.dart';
 import '../settings/settings_dialog.dart';
 import '../settings/settings_screen.dart';
 
@@ -39,8 +39,6 @@ class _CatMainState extends State<CatMain> {
 
   // Define constants for page indices
   static const int kDashboardIndex = 0;
-  static const int kCollarTagIndex = 1;
-  static const int kHealthIndex = 2;
   static const int kReportLostIndex = 3; // Add this new constant
   static const int kSettingsIndex = 4;   // Update this index
 
