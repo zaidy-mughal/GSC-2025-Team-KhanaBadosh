@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';  // Import for clipboard functionality
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:cached_network_image/cached_network_image.dart';
-import 'package:url_launcher/url_launcher.dart';  // You'll need to add this dependency
+import 'package:url_launcher/url_launcher.dart';  // For phone call functionality
 
 class LostCatDetailScreen extends StatefulWidget {
   final Map<String, dynamic> cat;
@@ -44,7 +43,7 @@ class _LostCatDetailScreenState extends State<LostCatDetailScreen> {
 
       final response = await _supabase
           .from('profiles')
-          .select()
+          .select('user_id, name, display_name, address, city, region, profile_image, email, number')
           .eq('user_id', userId)
           .single();
 
@@ -92,26 +91,60 @@ class _LostCatDetailScreenState extends State<LostCatDetailScreen> {
     );
   }
 
-  // Method to make phone call
+  // Improved method to make phone call
   Future<void> _makePhoneCall(String phoneNumber) async {
-    final Uri phoneUri = Uri(scheme: 'tel', path: phoneNumber);
-    if (await canLaunchUrl(phoneUri)) {
-      await launchUrl(phoneUri);
-    } else {
-      if (context.mounted) {
+    // Ensure the phone number is properly formatted
+    String formattedNumber = phoneNumber.trim();
+
+    if (phoneNumber.length == 10 && phoneNumber[0] != '0') {
+      phoneNumber = '0$phoneNumber';
+      formattedNumber = phoneNumber.trim();
+    }
+
+    // Create the Uri for launching the phone app
+    final Uri phoneUri = Uri(scheme: 'tel', path: formattedNumber);
+
+    try {
+      // Launch URL with forceSafariVC: false and universalLinksOnly: false
+      // to ensure it opens in the phone app
+      await launchUrl(
+        phoneUri,
+        mode: LaunchMode.externalApplication,
+      );
+    } catch (e) {
+      if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Could not launch phone call to $phoneNumber')),
+          SnackBar(content: Text('Could not make call: $formattedNumber')),
         );
       }
     }
   }
 
-  // Method to copy to clipboard
-  void _copyToClipboard(String text) {
-    Clipboard.setData(ClipboardData(text: text));
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Phone number copied to clipboard: $text')),
-    );
+  // Convert numeric phone number to string
+  String? _getPhoneNumberAsString() {
+    if (_ownerData?['number'] == null) return null;
+    return _ownerData!['number'].toString();
+  }
+
+  // Get formatted address
+  String? _getFormattedAddress() {
+    if (_ownerData == null) return null;
+
+    final List<String> addressParts = [];
+
+    if (_ownerData!['address'] != null && _ownerData!['address'].toString().isNotEmpty) {
+      addressParts.add(_ownerData!['address'].toString());
+    }
+
+    if (_ownerData!['city'] != null && _ownerData!['city'].toString().isNotEmpty) {
+      addressParts.add(_ownerData!['city'].toString());
+    }
+
+    if (_ownerData!['region'] != null && _ownerData!['region'].toString().isNotEmpty) {
+      addressParts.add(_ownerData!['region'].toString());
+    }
+
+    return addressParts.isEmpty ? null : addressParts.join(', ');
   }
 
   String _formatLostDate() {
@@ -138,16 +171,7 @@ class _LostCatDetailScreenState extends State<LostCatDetailScreen> {
       appBar: AppBar(
         backgroundColor: colors.primary.withOpacity(0.1),
         iconTheme: IconThemeData(color: colors.primary),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.share),
-            onPressed: () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Share functionality coming soon!')),
-              );
-            },
-          ),
-        ],
+        // Share button removed as requested
       ),
       body: SingleChildScrollView(
         child: Column(
@@ -250,7 +274,7 @@ class _LostCatDetailScreenState extends State<LostCatDetailScreen> {
               ),
             ),
 
-            // Contact options - UPDATED SECTION
+            // Contact options
             Padding(
               padding: const EdgeInsets.all(16),
               child: Column(
@@ -265,17 +289,16 @@ class _LostCatDetailScreenState extends State<LostCatDetailScreen> {
                     ),
                   ),
                   const SizedBox(height: 12),
-                  // Updated button row with single Call Owner button
+                  // Call owner button with direct phone call
                   Row(
                     children: [
                       Expanded(
                         child: ElevatedButton.icon(
                           onPressed: () {
-                            final String? phoneNumber = _ownerData?['phone'];
+                            // Get phone number as string
+                            final String? phoneNumber = _getPhoneNumberAsString();
                             if (phoneNumber != null && phoneNumber.isNotEmpty) {
-                              // Copy phone number to clipboard
-                              _copyToClipboard(phoneNumber);
-                              // Try to make a call
+                              // Make the call directly
                               _makePhoneCall(phoneNumber);
                             } else {
                               ScaffoldMessenger.of(context).showSnackBar(
@@ -403,10 +426,10 @@ class _LostCatDetailScreenState extends State<LostCatDetailScreen> {
                                   CircleAvatar(
                                     radius: 40,
                                     backgroundColor: colors.primary.withOpacity(0.3),
-                                    backgroundImage: _ownerData?['avatar_url'] != null && _ownerData?['avatar_url'].isNotEmpty
-                                        ? NetworkImage(_ownerData!['avatar_url'])
+                                    backgroundImage: _ownerData?['profile_image'] != null && _ownerData?['profile_image'].isNotEmpty
+                                        ? NetworkImage(_ownerData!['profile_image'])
                                         : null,
-                                    child: _ownerData?['avatar_url'] == null || _ownerData?['avatar_url'].isEmpty
+                                    child: _ownerData?['profile_image'] == null || _ownerData?['profile_image'].isEmpty
                                         ? Icon(Icons.person, size: 40, color: colors.primary)
                                         : null,
                                   ),
@@ -416,16 +439,16 @@ class _LostCatDetailScreenState extends State<LostCatDetailScreen> {
                                       crossAxisAlignment: CrossAxisAlignment.start,
                                       children: [
                                         Text(
-                                          _ownerData?['full_name'] ?? 'Unknown',
+                                          _ownerData?['display_name'] ?? 'Unknown',
                                           style: TextStyle(
                                             fontSize: 18,
                                             fontWeight: FontWeight.bold,
                                             color: colors.onSurface,
                                           ),
                                         ),
-                                        if (_ownerData?['username'] != null)
+                                        if (_ownerData?['name'] != null && _ownerData?['name'] != _ownerData?['display_name'])
                                           Text(
-                                            '@${_ownerData!['username']}',
+                                            '@${_ownerData!['name']}',
                                             style: TextStyle(
                                               fontSize: 14,
                                               color: colors.onSurface.withOpacity(0.7),
@@ -439,14 +462,11 @@ class _LostCatDetailScreenState extends State<LostCatDetailScreen> {
                               const SizedBox(height: 16),
 
                               // Owner details
-                              infoRow('Full Name', _ownerData?['name'], colors),
                               infoRow('Email', _ownerData?['email'], colors),
-                              infoRow('Phone', _ownerData?['phone'], colors),
-                              infoRow('Location', _ownerData?['location'], colors, multiLine: true),
-                              if (_ownerData?['bio'] != null)
-                                infoRow('Bio', _ownerData?['bio'], colors, multiLine: true),
-                              if (_ownerData?['website'] != null)
-                                infoRow('Website', _ownerData?['website'], colors),
+                              infoRow('Phone', _getPhoneNumberAsString(), colors),
+
+                              // Combined address fields
+                              infoRow('Address', _getFormattedAddress(), colors, multiLine: true),
                             ],
                           )
                         else

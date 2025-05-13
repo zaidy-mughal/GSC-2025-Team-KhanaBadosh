@@ -35,10 +35,20 @@ class CatsDataCache {
 
   Future<void> fetchCats({bool forceRefresh = false}) async {
     try {
+      final currentUser = _supabase.auth.currentUser;
+      if (currentUser == null) {
+        // Handle unauthenticated state
+        debugPrint('No user logged in, cannot fetch cats');
+        catsNotifier.value = [];
+        return;
+      }
+
       final response = await _supabase
           .from('cats')
           .select()
+          .eq('user_id', currentUser.id)
           .order('name');
+
 
       final List<Map<String, dynamic>> cats =
       (response as List).map((item) => item as Map<String, dynamic>).toList();
