@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import '../cat/cat_detail_screen.dart';
+import '../cat/cat_main.dart';
 import 'add_cat_screen.dart';
 import 'package:flutter_cache_manager/flutter_cache_manager.dart';
 import 'package:cached_network_image/cached_network_image.dart';
@@ -370,7 +370,7 @@ class _CatsListScreenState extends State<CatsListScreen> with SingleTickerProvid
                                 Navigator.push(
                                   context,
                                   MaterialPageRoute(
-                                    builder: (context) => CatDetailScreen(cat: cat),
+                                    builder: (context) => CatMain(cat: cat),
                                   ),
                                 ).then((updatedCat) {
                                   if (updatedCat != null && updatedCat is Map<String, dynamic>) {

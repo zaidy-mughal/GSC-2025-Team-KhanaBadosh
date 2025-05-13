@@ -578,7 +578,9 @@ class LostCatCard extends StatelessWidget {
                                 ),
                               ),
                               Text(
-                                '$daysLost ${daysLost == 1 ? 'day' : 'days'} ago',
+                                daysLost == 0
+                                    ? 'Since Today'
+                                    : '$daysLost ${daysLost == 1 ? 'day' : 'days'} ago',
                                 style: TextStyle(
                                   fontSize: 12,
                                   color: colors.onSurface.withOpacity(0.6),
