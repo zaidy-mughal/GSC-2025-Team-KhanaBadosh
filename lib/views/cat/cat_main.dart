@@ -4,8 +4,9 @@ import '../../core/theme/theme_provider.dart';
 import '../cat/cat_dashboard.dart';
 import '../cat/collar_tag_screen.dart';
 import '../cat/health_screen.dart';
-import '../user/settings_dialog.dart';
-import '../user/settings_screen.dart';
+import '../cat/report_lost_screen.dart'; // Add this new import
+import '../settings/settings_dialog.dart';
+import '../settings/settings_screen.dart';
 
 class CatMain extends StatefulWidget {
   final Map<String, dynamic> cat;
@@ -26,6 +27,7 @@ class _CatMainState extends State<CatMain> {
     'Dashboard',
     'Collar Tag',
     'Health',
+    'Report Lost',
     'Settings'
   ];
   bool _isDialogOpen = false;
@@ -39,7 +41,8 @@ class _CatMainState extends State<CatMain> {
   static const int kDashboardIndex = 0;
   static const int kCollarTagIndex = 1;
   static const int kHealthIndex = 2;
-  static const int kSettingsIndex = 3;
+  static const int kReportLostIndex = 3; // Add this new constant
+  static const int kSettingsIndex = 4;   // Update this index
 
   @override
   void initState() {
@@ -72,6 +75,7 @@ class _CatMainState extends State<CatMain> {
       CatDashboard(cat: widget.cat, onNavigateToTab: _navigateToTab),
       CollarTagScreen(cat: widget.cat),
       HealthScreen(cat: widget.cat),
+      ReportLostScreen(cat: widget.cat), // Add the new Report Lost screen
       const SettingsScreen(),
     ];
   }
@@ -85,7 +89,7 @@ class _CatMainState extends State<CatMain> {
     }
 
     // Don't navigate to settings from bottom nav - settings is only accessible from dialog
-    if (index < kSettingsIndex) {
+    if (index <= kReportLostIndex) {  // Updated to include Report Lost in nav
       _navigateToTab(index);
     }
   }
@@ -163,7 +167,7 @@ class _CatMainState extends State<CatMain> {
       final currentPage = _pageController.page?.round() ?? 0;
       final isSwipingLeft = notification.metrics.pixels > _dragStartPosition;
 
-      // Case 1: On settings page (index 3), prevent any swipe navigation
+      // Case 1: On settings page (index 4), prevent any swipe navigation
       if (currentPage == kSettingsIndex) {
         if (notification is ScrollUpdateNotification) {
           _pageController.jumpToPage(kSettingsIndex);
@@ -172,10 +176,10 @@ class _CatMainState extends State<CatMain> {
       }
 
       // Case 2: Trying to swipe to settings page
-      else if (currentPage == kHealthIndex && isSwipingLeft) {
-        // Prevent swiping left to settings from health page
+      else if (currentPage == kReportLostIndex && isSwipingLeft) {
+        // Prevent swiping left to settings from Report Lost page
         if (notification is ScrollUpdateNotification) {
-          _pageController.jumpToPage(kHealthIndex);
+          _pageController.jumpToPage(kReportLostIndex);
         }
         return true; // Block the scroll
       }
@@ -227,60 +231,13 @@ class _CatMainState extends State<CatMain> {
                   : Icon(Icons.menu, color: colors.onSurface),
               onPressed: _showSettingsDialog,
             ),
-            title: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                // Cat profile picture if available
-                if (widget.cat['image_url'] != null && widget.cat['image_url'].isNotEmpty)
-                  Container(
-                    width: 30,
-                    height: 30,
-                    margin: const EdgeInsets.only(right: 8),
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      image: DecorationImage(
-                        image: NetworkImage(widget.cat['image_url']),
-                        fit: BoxFit.cover,
-                      ),
-                    ),
-                  )
-                else
-                  Container(
-                    width: 30,
-                    height: 30,
-                    margin: const EdgeInsets.only(right: 8),
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: colors.primary.withOpacity(0.2),
-                    ),
-                    child: Icon(
-                      Icons.pets,
-                      size: 18,
-                      color: colors.primary,
-                    ),
-                  ),
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      widget.cat['name'] ?? 'Cat Profile',
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 16,
-                        color: colors.onSurface,
-                      ),
-                    ),
-                    Text(
-                      _selectedIndex < _titles.length ? _titles[_selectedIndex] : _titles[0],
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: colors.onSurface.withOpacity(0.7),
-                      ),
-                    ),
-                  ],
-                ),
-              ],
+            title: Text(
+              _selectedIndex < _titles.length ? _titles[_selectedIndex] : _titles[0],
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+                fontSize: 16,
+                color: colors.onSurface,
+              ),
             ),
             elevation: 0,
             backgroundColor: colors.surface,
@@ -351,6 +308,11 @@ class _CatMainState extends State<CatMain> {
               icon: Icon(Icons.medical_services_rounded),
               label: 'Health',
               activeIcon: Icon(Icons.medical_services),
+            ),
+            BottomNavigationBarItem(
+              icon: Icon(Icons.pets_rounded),
+              label: 'Report Lost',
+              activeIcon: Icon(Icons.pets),
             ),
           ],
         ),

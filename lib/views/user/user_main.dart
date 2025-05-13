@@ -6,8 +6,8 @@ import '../user/user_cats_screen.dart';
 import '../user/news_screen.dart';
 import '../user/chat_screen.dart';
 import '../user/lost_and_found_screen.dart';
-import 'settings_dialog.dart';
-import 'settings_screen.dart';
+import '../settings/settings_dialog.dart';
+import '../settings/settings_screen.dart';
 
 class UserMain extends StatefulWidget {
   const UserMain({super.key});
