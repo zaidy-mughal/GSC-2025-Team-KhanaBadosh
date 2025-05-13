@@ -31,6 +31,7 @@ class UserDataManager {
   Map<String, dynamic>? userData;
   int catsCount = 0;
   DateTime? lastFetched;
+  String? _currentUserId;
 
   // Cache expiration threshold (15 minutes)
   static const cacheDuration = Duration(minutes: 15);
@@ -38,12 +39,33 @@ class UserDataManager {
   bool get isDataFresh => lastFetched != null &&
       DateTime.now().difference(lastFetched!) < cacheDuration;
 
-  Future<void> fetchUserData() async {
-    // If data is fresh, no need to fetch again
-    if (isDataFresh) return;
+  // Clear all user data
+  void clearData() {
+    userData = null;
+    catsCount = 0;
+    lastFetched = null;
+    _currentUserId = null;
+  }
 
+  Future<void> fetchUserData() async {
     final userId = Supabase.instance.client.auth.currentUser?.id;
-    if (userId == null) return;
+
+    // If no logged in user, clear data and return
+    if (userId == null) {
+      clearData();
+      return;
+    }
+
+    // Check if the user has changed or if data is stale
+    final userChanged = _currentUserId != userId;
+    if (userChanged) {
+      // Clear existing data if user has changed
+      clearData();
+      _currentUserId = userId;
+    } else if (isDataFresh && userData != null) {
+      // If data is fresh and for the current user, no need to fetch again
+      return;
+    }
 
     try {
       final response = await Supabase.instance.client

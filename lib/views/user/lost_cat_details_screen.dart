@@ -43,7 +43,7 @@ class _LostCatDetailScreenState extends State<LostCatDetailScreen> {
 
       final response = await _supabase
           .from('profiles')
-          .select('user_id, name, display_name, address, city, region, profile_image, email, number')
+          .select('user_id, name, display_name, address, city, region, profile_image_url, email, number')
           .eq('user_id', userId)
           .single();
 
@@ -426,10 +426,10 @@ class _LostCatDetailScreenState extends State<LostCatDetailScreen> {
                                   CircleAvatar(
                                     radius: 40,
                                     backgroundColor: colors.primary.withOpacity(0.3),
-                                    backgroundImage: _ownerData?['profile_image'] != null && _ownerData?['profile_image'].isNotEmpty
-                                        ? NetworkImage(_ownerData!['profile_image'])
+                                    backgroundImage: _ownerData?['profile_image_url'] != null && _ownerData?['profile_image_url'].isNotEmpty
+                                        ? NetworkImage(_ownerData!['profile_image_url'])
                                         : null,
-                                    child: _ownerData?['profile_image'] == null || _ownerData?['profile_image'].isEmpty
+                                    child: _ownerData?['profile_image_url'] == null || _ownerData?['profile_image_url'].isEmpty
                                         ? Icon(Icons.person, size: 40, color: colors.primary)
                                         : null,
                                   ),
