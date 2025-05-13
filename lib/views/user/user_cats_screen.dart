@@ -2,8 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../cat/cat_main.dart';
 import 'add_cat_screen.dart';
+import 'add_qr_cat_screen.dart';
 import 'package:flutter_cache_manager/flutter_cache_manager.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+
 
 // Extension to adjust color brightness
 extension ColorBrightness on Color {
@@ -783,10 +785,16 @@ class AddOptionsMenu extends StatelessWidget {
                   title: 'Scan QR Code',
                   description: 'Import from cat collar tag',
                   onTap: () {
-                    onCancel();
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('QR scanner coming soon!')),
-                    );
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const AddQrCatScreen(),
+                      ),
+                    ).then((result) {
+                      if (result == true) {
+                        onCancel();
+                      }
+                    });
                   },
                   colors: colors,
                 ),

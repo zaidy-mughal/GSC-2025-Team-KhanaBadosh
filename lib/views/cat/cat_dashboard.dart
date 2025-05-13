@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:qr_flutter/qr_flutter.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import '../user/user_main.dart';
 import 'cat_detail_screen.dart';
 
@@ -20,6 +22,144 @@ class _CatDashboardState extends State<CatDashboard> with AutomaticKeepAliveClie
   // Keep this state alive when navigating
   @override
   bool get wantKeepAlive => true;
+
+  // Save a global key for accessing a valid context
+  final GlobalKey<ScaffoldMessengerState> _scaffoldMessengerKey = GlobalKey<ScaffoldMessengerState>();
+
+  void _showSellCatDialog(BuildContext context) {
+    final TextEditingController emailController = TextEditingController();
+
+    showDialog(
+      context: context,
+      builder: (BuildContext dialogContext) {
+        return Dialog(
+          child: Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Text(
+                  'Transfer Cat Ownership',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                TextField(
+                  controller: emailController,
+                  decoration: const InputDecoration(
+                    labelText: 'Enter new owner\'s email',
+                  ),
+                  keyboardType: TextInputType.emailAddress,
+                ),
+                const SizedBox(height: 16),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    TextButton(
+                      onPressed: () => Navigator.of(dialogContext).pop(),
+                      child: const Text('Cancel'),
+                    ),
+                    ElevatedButton(
+                      onPressed: () {
+                        final email = emailController.text.trim().toLowerCase();
+                        if (email.isEmpty) return;
+
+                        // Close the dialog before async operation
+                        Navigator.of(dialogContext).pop();
+
+                        // Store context for later use
+                        final currentContext = context;
+
+                        // Execute the transfer process
+                        _processCatTransfer(email, currentContext);
+                      },
+                      child: const Text('Continue'),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  // Separate method to handle the async operations
+  Future<void> _processCatTransfer(String email, BuildContext context) async {
+    try {
+      final supabase = Supabase.instance.client;
+
+      // Get the user ID by email
+      final response = await supabase
+          .from('profiles')
+          .select('user_id')
+          .eq('email', email)
+          .single();
+
+      final toUserId = response['user_id'];
+      debugPrint('User ID: $toUserId');
+
+      final payload = {
+        'cat_id': widget.cat['id'],
+        'to_user_id': toUserId,
+      };
+
+      // Check if widget is still mounted before showing dialog
+      if (mounted) {
+        showDialog(
+          context: context,
+          builder: (BuildContext qrContext) => Dialog(
+            child: Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Text(
+                    'Scan QR to Transfer',
+                    style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  const Text('Ask the new owner to scan this QR code:'),
+                  const SizedBox(height: 16),
+                  Container(
+                    width: 200.0,
+                    height: 200.0,
+                    child: QrImageView(
+                      data: payload.toString(),
+                      version: QrVersions.auto,
+                      size: 200.0,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  TextButton(
+                    onPressed: () => Navigator.of(qrContext).pop(),
+                    child: const Text('Done'),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      }
+    } catch (e) {
+      debugPrint('Error: $e');
+      // Use ScaffoldMessenger directly if widget is still mounted
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error: ${e.toString()}'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -260,13 +400,11 @@ class _CatDashboardState extends State<CatDashboard> with AutomaticKeepAliveClie
               // Sell My Cat card
               ActionCard(
                 icon: Icons.sell,
-                title: 'Sell My Cat',
-                value: 'Find New Home',
-                description: 'Create listing to sell your cat',
+                title: 'Transfer Cat',
+                value: 'New Owner Transfer',
+                description: 'Transfer ownership via QR code',
                 color: Colors.amber,
-                onTap: () {
-                  // Add sell cat functionality here
-                },
+                onTap: () => _showSellCatDialog(context),
                 showBadge: true,
               ),
             ],
