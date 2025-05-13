@@ -237,6 +237,7 @@ class _LostAndFoundScreenState extends State<LostAndFoundScreen> with SingleTick
                             borderRadius: BorderRadius.circular(25),
                             color: colors.primary,
                           ),
+                          dividerColor: Colors.transparent,
                           // Removed the built-in divider by setting indicatorColor to transparent
                           indicatorColor: Colors.transparent,
                           labelColor: colors.onPrimary,

@@ -231,11 +231,29 @@ class _CatsListScreenState extends State<CatsListScreen> with SingleTickerProvid
     }
   }
 
+  // Modified to show dialog instead of directly navigating
+  Future<void> _showAddCatOptions() async {
+    _toggleAddOptions(); // Show the options dialog
+  }
+
   Future<void> _addNewCat() async {
     _toggleAddOptions(); // Hide the menu first
     final result = await Navigator.push(
       context,
       MaterialPageRoute(builder: (context) => const AddCatScreen()),
+    );
+
+    if (result == true) {
+      // Force refresh to get the newly added cat
+      _refreshCats();
+    }
+  }
+
+  Future<void> _addCatViaQrCode() async {
+    _toggleAddOptions(); // Hide the menu first
+    final result = await Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => const AddQrCatScreen()),
     );
 
     if (result == true) {
@@ -377,6 +395,8 @@ class _CatsListScreenState extends State<CatsListScreen> with SingleTickerProvid
                                 ).then((updatedCat) {
                                   if (updatedCat != null && updatedCat is Map<String, dynamic>) {
                                     _catsCache.updateCat(updatedCat);
+                                    // Also refresh the list to get freshest data
+                                    _refreshCats();
                                   }
                                 });
                               },
@@ -395,6 +415,7 @@ class _CatsListScreenState extends State<CatsListScreen> with SingleTickerProvid
           if (_showAddOptions)
             AddOptionsMenu(
               onAddNewCat: _addNewCat,
+              onAddCatViaQr: _addCatViaQrCode, // Add new parameter for QR code
               onCancel: _toggleAddOptions,
               colors: colors,
             ),
@@ -404,60 +425,68 @@ class _CatsListScreenState extends State<CatsListScreen> with SingleTickerProvid
   }
 
   Widget _buildEmptyState(ColorScheme colors) {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
+    return RefreshIndicator(
+      onRefresh: _refreshCats, // Add refresh capability to empty state too
+      child: ListView(
         children: [
-          // Cat paw print pattern
-          Wrap(
-            alignment: WrapAlignment.center,
-            children: List.generate(
-              5,
-                  (index) => Container(
-                margin: const EdgeInsets.all(8),
-                child: Icon(
-                  Icons.pets,
-                  size: index % 2 == 0 ? 40 : 30,
-                  color: colors.primary.withOpacity(
-                    index * 0.1 + 0.2,
+          SizedBox(height: MediaQuery.of(context).size.height * 0.2),
+          Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                // Cat paw print pattern
+                Wrap(
+                  alignment: WrapAlignment.center,
+                  children: List.generate(
+                    5,
+                        (index) => Container(
+                      margin: const EdgeInsets.all(8),
+                      child: Icon(
+                        Icons.pets,
+                        size: index % 2 == 0 ? 40 : 30,
+                        color: colors.primary.withOpacity(
+                          index * 0.1 + 0.2,
+                        ),
+                      ),
+                    ),
                   ),
                 ),
-              ),
-            ),
-          ),
-          const SizedBox(height: 24),
-          Text(
-            'No cats added yet',
-            style: TextStyle(
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
-              color: colors.onSurface,
-            ),
-          ),
-          const SizedBox(height: 12),
-          Text(
-            'Add your feline companions to\ntrack their profiles and care',
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              fontSize: 16,
-              color: colors.onSurface.withOpacity(0.7),
-            ),
-          ),
-          const SizedBox(height: 32),
-          ElevatedButton.icon(
-            onPressed: _addNewCat,
-            icon: const Icon(Icons.add),
-            label: const Text('Add Your First Cat'),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: colors.primary,
-              foregroundColor: colors.onPrimary,
-              padding: const EdgeInsets.symmetric(
-                horizontal: 24,
-                vertical: 16,
-              ),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(16),
-              ),
+                const SizedBox(height: 24),
+                Text(
+                  'No cats added yet',
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                    color: colors.onSurface,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  'Add your feline companions to\ntrack their profiles and care',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 16,
+                    color: colors.onSurface.withOpacity(0.7),
+                  ),
+                ),
+                const SizedBox(height: 32),
+                ElevatedButton.icon(
+                  onPressed: _showAddCatOptions, // Changed to show dialog instead of direct navigation
+                  icon: const Icon(Icons.add),
+                  label: const Text('Add Your First Cat'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: colors.primary,
+                    foregroundColor: colors.onPrimary,
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 24,
+                      vertical: 16,
+                    ),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                  ),
+                ),
+              ],
             ),
           ),
         ],
@@ -711,15 +740,17 @@ class AddCatButton extends StatelessWidget {
   }
 }
 
-// Original AddOptionsMenu class remains the same
+// Updated AddOptionsMenu class with fixed navigation for QR code option
 class AddOptionsMenu extends StatelessWidget {
   final VoidCallback onAddNewCat;
+  final VoidCallback onAddCatViaQr; // New callback for QR code
   final VoidCallback onCancel;
   final ColorScheme colors;
 
   const AddOptionsMenu({
     super.key,
     required this.onAddNewCat,
+    required this.onAddCatViaQr, // New parameter
     required this.onCancel,
     required this.colors,
   });
@@ -784,18 +815,7 @@ class AddOptionsMenu extends StatelessWidget {
                   icon: Icons.qr_code_scanner,
                   title: 'Scan QR Code',
                   description: 'Import from cat collar tag',
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => const AddQrCatScreen(),
-                      ),
-                    ).then((result) {
-                      if (result == true) {
-                        onCancel();
-                      }
-                    });
-                  },
+                  onTap: onAddCatViaQr, // Use the new callback directly
                   colors: colors,
                 ),
                 const SizedBox(height: 24),
