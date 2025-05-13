@@ -10,10 +10,10 @@ class CompleteProfileScreen extends StatefulWidget {
   final String initialEmail;
 
   const CompleteProfileScreen({
-    Key? key,
+    super.key,
     required this.initialDisplayName,
     required this.initialEmail,
-  }) : super(key: key);
+  });
 
   @override
   State<CompleteProfileScreen> createState() => _CompleteProfileScreenState();
@@ -23,10 +23,11 @@ class _CompleteProfileScreenState extends State<CompleteProfileScreen> {
   final _formKey = GlobalKey<FormState>();
   late final TextEditingController _nameController;
   final TextEditingController _ageController = TextEditingController();
+  final TextEditingController _phoneController = TextEditingController(); // New phone controller
   final TextEditingController _addressController = TextEditingController();
   final TextEditingController _cityController = TextEditingController();
   final TextEditingController _regionController = TextEditingController();
-  String _gender = 'Male'; // Default gender
+  String _gender = 'Male';
   File? _profileImage;
   bool _isLoading = false;
   final ImagePicker _picker = ImagePicker();
@@ -46,6 +47,7 @@ class _CompleteProfileScreenState extends State<CompleteProfileScreen> {
         setState(() {
           _nameController.text = profileData['name'] ?? widget.initialDisplayName;
           _ageController.text = profileData['age']?.toString() ?? '';
+          _phoneController.text = profileData['number']?.toString() ?? '';
           _gender = profileData['gender'] ?? 'Male';
           _addressController.text = profileData['address'] ?? '';
           _cityController.text = profileData['city'] ?? '';
@@ -69,6 +71,7 @@ class _CompleteProfileScreenState extends State<CompleteProfileScreen> {
   void dispose() {
     _nameController.dispose();
     _ageController.dispose();
+    _phoneController.dispose(); // Dispose phone controller
     _addressController.dispose();
     _cityController.dispose();
     _regionController.dispose();
@@ -101,6 +104,8 @@ class _CompleteProfileScreenState extends State<CompleteProfileScreen> {
         'name': _nameController.text.trim(),
         'display_name': _nameController.text.trim(),
         'age': _ageController.text.trim(),
+        'number': _phoneController.text.trim(), // Save phone number
+        'email': widget.initialEmail, // Save email automatically
         'gender': _gender,
         'address': _addressController.text.trim(),
         'city': _cityController.text.trim(),
@@ -261,7 +266,7 @@ class _CompleteProfileScreenState extends State<CompleteProfileScreen> {
 
               // Personal Information Card
               Card(
-                color: colors.surfaceVariant,
+                color: colors.surfaceContainerHighest,
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(16),
                 ),
@@ -314,6 +319,25 @@ class _CompleteProfileScreenState extends State<CompleteProfileScreen> {
                       ),
                       const SizedBox(height: 16),
 
+                      // Phone Number Field
+                      _buildTextField(
+                        label: "Phone Number",
+                        controller: _phoneController,
+                        icon: Icons.phone,
+                        keyboardType: TextInputType.phone,
+                        validator: (value) {
+                          if (value == null || value.isEmpty) {
+                            return 'Please enter your phone number';
+                          }
+                          // Simple validation for phone number format
+                          if (!RegExp(r'^\d{10,15}$').hasMatch(value.replaceAll(RegExp(r'[^0-9]'), ''))) {
+                            return 'Please enter a valid phone number';
+                          }
+                          return null;
+                        },
+                      ),
+                      const SizedBox(height: 16),
+
                       // Gender Selection
                       Text(
                         "Gender",
@@ -339,7 +363,7 @@ class _CompleteProfileScreenState extends State<CompleteProfileScreen> {
 
               // Address Card
               Card(
-                color: colors.surfaceVariant,
+                color: colors.surfaceContainerHighest,
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(16),
                 ),

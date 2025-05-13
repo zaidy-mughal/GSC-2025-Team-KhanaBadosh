@@ -8,7 +8,7 @@ class UserDetailScreen extends StatelessWidget {
     required this.userData,
   });
 
-  Widget infoRow(String label, String? value, ColorScheme colors) {
+  Widget infoRow(String label, String? value, ColorScheme colors, {bool multiLine = false}) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 10.0),
       child: Column(
@@ -30,6 +30,8 @@ class UserDetailScreen extends StatelessWidget {
               fontWeight: FontWeight.w600,
               color: colors.onSurface,
             ),
+            maxLines: multiLine ? 5 : 1,
+            overflow: multiLine ? TextOverflow.ellipsis : TextOverflow.ellipsis,
           ),
           const SizedBox(height: 8),
           Divider(height: 1, color: colors.onSurface.withOpacity(0.2)),
@@ -38,17 +40,39 @@ class UserDetailScreen extends StatelessWidget {
     );
   }
 
+  String _formatAddress() {
+    final address = userData['address'];
+    final city = userData['city'];
+    final region = userData['region'];
+
+    if (address == null && city == null && region == null) {
+      return 'Not set';
+    }
+
+    List<String> addressParts = [];
+
+    if (address != null && address.isNotEmpty) {
+      addressParts.add(address);
+    }
+
+    if (city != null && city.isNotEmpty) {
+      addressParts.add(city);
+    }
+
+    if (region != null && region.isNotEmpty) {
+      addressParts.add(region);
+    }
+
+    return addressParts.join(', ');
+  }
+
   @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(
-          userData['display_name'] ?? 'User Details',
-          style: TextStyle(color: colors.onPrimary),
-        ),
-        backgroundColor: colors.primary,
+        backgroundColor: colors.primary.withOpacity(0.1),
         iconTheme: IconThemeData(color: colors.onPrimary),
       ),
       body: SingleChildScrollView(
@@ -89,6 +113,17 @@ class UserDetailScreen extends StatelessWidget {
                       color: colors.onSurface,
                     ),
                   ),
+                  if (userData['email'] != null && userData['email'].isNotEmpty)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 8.0),
+                      child: Text(
+                        userData['email'],
+                        style: TextStyle(
+                          fontSize: 16,
+                          color: colors.onSurface.withOpacity(0.7),
+                        ),
+                      ),
+                    ),
                 ],
               ),
             ),
@@ -113,12 +148,12 @@ class UserDetailScreen extends StatelessWidget {
                         ),
                       ),
                       const SizedBox(height: 16),
-                      infoRow("Name", userData['name'], colors),
+                      infoRow("Name", userData['name']?.toString(), colors),
+                      infoRow("Email", userData['email']?.toString(), colors),
+                      infoRow("Phone Number", userData['number']?.toString(), colors),
                       infoRow("Age", userData['age']?.toString(), colors),
-                      infoRow("Gender", userData['gender'], colors),
-                      infoRow("Address", userData['address'], colors),
-                      infoRow("City", userData['city'], colors),
-                      infoRow("Region", userData['region'], colors),
+                      infoRow("Gender", userData['gender']?.toString(), colors),
+                      infoRow("Address", _formatAddress(), colors, multiLine: true),
                     ],
                   ),
                 ),
