@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:path_provider/path_provider.dart';
+import 'dart:io';
 import '../../core/theme/theme_provider.dart';
 import '../auth/login_screen.dart';
 
@@ -63,16 +66,59 @@ class _SettingsScreenState extends State<SettingsScreen> {
     }
   }
 
+  // Add new method to clear cache data
+  Future<void> _clearAppCache() async {
+    try {
+      // Clear SharedPreferences
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.clear();
+
+      // Clear application directory cache
+      final cacheDir = await getTemporaryDirectory();
+      if (cacheDir.existsSync()) {
+        cacheDir.listSync().forEach((entity) {
+          if (entity is File) {
+            entity.deleteSync();
+          } else if (entity is Directory) {
+            entity.deleteSync(recursive: true);
+          }
+        });
+      }
+
+      // Clear application documents directory if needed
+      // Only use this if you're storing user-specific data here
+      /*
+      final appDocDir = await getApplicationDocumentsDirectory();
+      // Be careful with this - you might want to only delete specific files
+      // Consider keeping app settings or other non-user data
+      */
+
+      debugPrint('App cache cleared successfully');
+    } catch (e) {
+      debugPrint('Error clearing cache: $e');
+    }
+  }
+
   void _signOut() async {
-    await Supabase.instance.client.auth.signOut();
-    if (mounted) {
-      Navigator.pushAndRemoveUntil(
-        context,
-        MaterialPageRoute(
-          builder: (context) => const LoginScreen(),
-        ),
-            (route) => false,
-      );
+    try {
+      // First clear the cache
+      await _clearAppCache();
+
+      // Then sign out from Supabase
+      await Supabase.instance.client.auth.signOut();
+
+      if (mounted) {
+        Navigator.pushAndRemoveUntil(
+          context,
+          MaterialPageRoute(
+            builder: (context) => const LoginScreen(),
+          ),
+              (route) => false,
+        );
+      }
+    } catch (e) {
+      debugPrint('Error during sign out: $e');
+      // You might want to show an error message to the user here
     }
   }
 
