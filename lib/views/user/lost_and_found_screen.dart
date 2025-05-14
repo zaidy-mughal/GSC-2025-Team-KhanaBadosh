@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter_cache_manager/flutter_cache_manager.dart';
-import 'lost_cat_details_screen.dart'; // Add this import
-
+import 'lost_cat_details_screen.dart';
+import 'qr_found_screen.dart';
 
 // Extension to adjust color brightness - same as in user_cats_screen.dart
 extension ColorBrightness on Color {
@@ -400,11 +400,10 @@ class _LostAndFoundScreenState extends State<LostAndFoundScreen> with SingleTick
           // Scan button
           ElevatedButton.icon(
             onPressed: () {
-              // Show snackbar for now since scanner isn't implemented
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('QR Scanner coming soon!'),
-                  duration: Duration(seconds: 2),
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const QRFoundScreen(),
                 ),
               );
             },
