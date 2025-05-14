@@ -129,7 +129,7 @@ class _CatMainState extends State<CatMain> {
       ),
       ReportLostScreen(
         cat: _currentCat,
-        // onRefresh: reloadCatData,
+        onRefresh: reloadCatData,
       ),
       const SettingsScreen(),
     ];
