@@ -11,7 +11,6 @@ const lightColorScheme = ColorScheme.light(
   primary: renoSand,
   onPrimary: Colors.white,
   onSurface: Colors.black,
-  background: scaffoldBackgroundLight,
   shadow: Colors.black,
 );
 
@@ -20,6 +19,5 @@ const darkColorScheme = ColorScheme.dark(
   primary: renoSand,
   onPrimary: Colors.white,
   onSurface: timberwolf,
-  background: scaffoldBackgroundDark,
   shadow: Colors.black54,
 );
