@@ -10,10 +10,12 @@ import '../settings/settings_screen.dart';
 
 class CatMain extends StatefulWidget {
   final Map<String, dynamic> cat;
+  final Future<Map<String, dynamic>> Function(String catId) refreshCat;
 
   const CatMain({
     super.key,
     required this.cat,
+    required this.refreshCat,
   });
 
   @override
@@ -37,19 +39,61 @@ class _CatMainState extends State<CatMain> {
   // Store drag start position to determine direction
   double _dragStartPosition = 0;
 
+  // Current cat data that can be updated
+  late Map<String, dynamic> _currentCat;
+
   // Define constants for page indices
   static const int kDashboardIndex = 0;
-  static const int kReportLostIndex = 3; // Add this new constant
-  static const int kSettingsIndex = 4;   // Update this index
+  static const int kReportLostIndex = 3;
+  static const int kSettingsIndex = 4;
 
   @override
   void initState() {
     super.initState();
+    // Initialize the current cat from widget
+    _currentCat = Map<String, dynamic>.from(widget.cat);
+
     _pageController.addListener(() {
       if (_pageController.page != null &&
           (_pageController.page?.round() ?? -1) != _selectedIndex) {
       }
     });
+  }
+
+  // Add method to update cat data from external source
+  void updateCatData(Map<String, dynamic> updatedCat) {
+    if (mounted) {
+      setState(() {
+        _currentCat = Map<String, dynamic>.from(updatedCat);
+      });
+    }
+  }
+
+  // Method to reload cat data using the callback
+  Future<void> reloadCatData() async {
+    if (_currentCat.containsKey('id')) {
+      try {
+        // Show loading indicator
+        if (mounted) {
+          setState(() {
+          });
+        }
+
+        // Call the provided refresh function and update local state
+        final updatedCat = await widget.refreshCat(_currentCat['id'].toString());
+
+        if (mounted) {
+          setState(() {
+            _currentCat = Map<String, dynamic>.from(updatedCat);
+          });
+        }
+      } catch (e) {
+        if (mounted) {
+          setState(() {
+          });
+        }
+      }
+    }
   }
 
   // Navigate to a specific tab
@@ -70,10 +114,23 @@ class _CatMainState extends State<CatMain> {
 
   List<Widget> _getPages() {
     return [
-      CatDashboard(cat: widget.cat, onNavigateToTab: _navigateToTab),
-      CollarTagScreen(cat: widget.cat),
-      HealthScreen(cat: widget.cat),
-      ReportLostScreen(cat: widget.cat), // Add the new Report Lost screen
+      CatDashboard(
+        cat: _currentCat,
+        onNavigateToTab: _navigateToTab,
+        // onRefresh: reloadCatData,
+      ),
+      CollarTagScreen(
+        cat: _currentCat,
+        onRefresh: reloadCatData,
+      ),
+      HealthScreen(
+        cat: _currentCat,
+        // onRefresh: reloadCatData,
+      ),
+      ReportLostScreen(
+        cat: _currentCat,
+        // onRefresh: reloadCatData,
+      ),
       const SettingsScreen(),
     ];
   }
@@ -81,7 +138,8 @@ class _CatMainState extends State<CatMain> {
   void _onItemTapped(int index) {
     // If already on dashboard and dashboard is tapped again
     if (index == kDashboardIndex && _selectedIndex == kDashboardIndex) {
-      // Could add "scroll to top" or refresh functionality here
+      // Refresh cat data when tapping dashboard again
+      reloadCatData();
       _pageController.jumpToPage(kDashboardIndex);
       return;
     }

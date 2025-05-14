@@ -106,6 +106,50 @@ class CatsDataCache {
       catsNotifier.value = currentCats;
     }
   }
+
+  Future<Map<String, dynamic>> refreshSingleCat(String catId) async {
+    try {
+      final currentUser = _supabase.auth.currentUser;
+      if (currentUser == null) {
+        throw Exception('No user logged in');
+      }
+
+      // Fetch the single cat from Supabase
+      final response = await _supabase
+          .from('cats')
+          .select()
+          .eq('id', catId)
+          .eq('user_id', currentUser.id)
+          .single();
+
+      final updatedCat = response;
+
+      // Update the cat in the local cache
+      final currentCats = List<Map<String, dynamic>>.from(catsNotifier.value);
+      final index = currentCats.indexWhere((cat) => cat['id'] == updatedCat['id']);
+
+      if (index != -1) {
+        currentCats[index] = updatedCat;
+        catsNotifier.value = currentCats;
+
+        // Preload the image if needed
+        if (updatedCat['image_url'] != null && updatedCat['image_url'].isNotEmpty) {
+          final cacheKey = '${updatedCat['id']}_${updatedCat['updated_at'] ?? ''}';
+          _cacheManager.getSingleFile(
+            updatedCat['image_url'],
+            key: cacheKey,
+          ).catchError((e) {
+            debugPrint('Image preload error: $e');
+          });
+        }
+      }
+
+      return updatedCat;
+    } catch (e) {
+      debugPrint('Error refreshing single cat: $e');
+      rethrow;
+    }
+  }
 }
 
 // Improved CatCacheManager with persistent storage
@@ -390,17 +434,17 @@ class _CatsListScreenState extends State<CatsListScreen> with SingleTickerProvid
                                 Navigator.push(
                                   context,
                                   MaterialPageRoute(
-                                    builder: (context) => CatMain(cat: cat),
+                                    builder: (context) => CatMain(
+                                      cat: cat,
+                                      refreshCat: (String catId) => _catsCache.refreshSingleCat(catId),
+                                    ),
                                   ),
                                 ).then((updatedCat) {
                                   if (updatedCat != null && updatedCat is Map<String, dynamic>) {
                                     _catsCache.updateCat(updatedCat);
-                                    // Also refresh the list to get freshest data
-                                    _refreshCats();
                                   }
                                 });
-                              },
-                            );
+                              },                            );
                           },
                         ),
                       ),
