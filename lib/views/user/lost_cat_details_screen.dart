@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:cached_network_image/cached_network_image.dart';
-import 'package:url_launcher/url_launcher.dart';  // For phone call functionality
+import 'package:url_launcher/url_launcher.dart';
+import 'lost_and_found_screen.dart';
 
 class LostCatDetailScreen extends StatefulWidget {
   final Map<String, dynamic> cat;
@@ -324,12 +325,15 @@ class _LostCatDetailScreenState extends State<LostCatDetailScreen> {
               ),
             ),
 
-            // Cat details card
+            // Cat details card - Using ColorBrightness extension
             Padding(
               padding: const EdgeInsets.all(16.0),
               child: Card(
-                elevation: 2,
-                color: colors.surface,
+                elevation: 1,
+                shadowColor: colors.shadow.withOpacity(0.7),
+                color: Theme.of(context).brightness == Brightness.light
+                    ? colors.surface.brighten(10)
+                    : colors.surface.brighten(15),
                 child: Padding(
                   padding: const EdgeInsets.all(16.0),
                   child: Column(
@@ -364,12 +368,15 @@ class _LostCatDetailScreenState extends State<LostCatDetailScreen> {
               ),
             ),
 
-            // Owner information card
+            // Owner information card - Using ColorBrightness extension
             Padding(
               padding: const EdgeInsets.all(16.0),
               child: Card(
-                elevation: 2,
-                color: colors.surface,
+                elevation: 1,
+                shadowColor: colors.shadow.withOpacity(0.7),
+                color: Theme.of(context).brightness == Brightness.light
+                    ? colors.surface.brighten(10)
+                    : colors.surface.brighten(15),
                 child: Padding(
                   padding: const EdgeInsets.all(16.0),
                   child: Column(
@@ -482,7 +489,7 @@ class _LostCatDetailScreenState extends State<LostCatDetailScreen> {
               ),
             ),
 
-            // Safety notice
+            // Safety notice with improved styling
             Padding(
               padding: const EdgeInsets.all(16),
               child: Container(

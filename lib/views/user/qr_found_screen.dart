@@ -102,8 +102,8 @@ class _QRFoundScreenState extends State<QRFoundScreen> {
       // Print debugging info
       print('Parsed QR JSON: $qrJson');
 
-      // Validate QR data format - we only need id and user_id
-      if (!qrJson.containsKey('id') || !qrJson.containsKey('user_id')) {
+      // Validate QR data format - we only need cat_number and user_number
+      if (!qrJson.containsKey('cat_number') || !qrJson.containsKey('user_number')) {
         setState(() {
           _errorMessage = 'Invalid QR code format. Missing required fields.';
           _isProcessing = false;
@@ -111,11 +111,11 @@ class _QRFoundScreenState extends State<QRFoundScreen> {
         return;
       }
 
-      final int catId = qrJson['id'] is int
-          ? qrJson['id']
-          : int.tryParse(qrJson['id'].toString()) ?? -1;
+      final int catId = qrJson['cat_number'] is int
+          ? qrJson['cat_number']
+          : int.tryParse(qrJson['cat_number'].toString()) ?? -1;
 
-      final String userId = qrJson['user_id'].toString();
+      final String userId = qrJson['user_number'].toString();
 
       // Print the extracted values for debugging
       print('Cat ID: $catId');

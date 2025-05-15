@@ -385,8 +385,8 @@ class _CollarTagScreenState extends State<CollarTagScreen> {
 
     // Create payload with only selected cat information
     final Map<String, dynamic> qrPayload = {
-      'id': widget.cat['id'],
-      'user_id': widget.cat['user_id'],
+      'cat_number': widget.cat['id'],
+      'user_number': widget.cat['user_id'],
       'note': 'To view this cat and its owner details please download our app Paw Protect'
     };
 
