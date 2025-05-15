@@ -9,7 +9,7 @@
         tools:ignore="PermissionImpliesUnsupportedChromeOsHardware" />
 
     <application
-        android:label="cat_app"
+        android:label="Paw Protect"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
         <activity
