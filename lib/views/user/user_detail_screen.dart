@@ -1,3 +1,4 @@
+import 'package:cat_app/views/auth/complete_profile_screen.dart';
 import 'package:flutter/material.dart';
 
 class UserDetailScreen extends StatelessWidget {
@@ -133,7 +134,7 @@ class UserDetailScreen extends StatelessWidget {
               padding: const EdgeInsets.all(16.0),
               child: Card(
                 elevation: 2,
-                color: colors.surface,
+                color: colors.surface.brighten(10),
                 child: Padding(
                   padding: const EdgeInsets.all(16.0),
                   child: Column(

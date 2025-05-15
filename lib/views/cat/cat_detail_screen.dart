@@ -1,3 +1,4 @@
+import 'package:cat_app/views/auth/complete_profile_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -59,7 +60,7 @@ class CatDetailScreen extends StatelessWidget {
           ),
           TextButton(
             onPressed: () => Navigator.pop(context, true),
-            child: Text(
+            child: const Text(
               'Delete',
               style: TextStyle(color: Colors.red),
             ),
@@ -162,7 +163,7 @@ class CatDetailScreen extends StatelessWidget {
               padding: const EdgeInsets.all(16.0),
               child: Card(
                 elevation: 2,
-                color: colors.surface,
+                color: colors.surface.brighten(10),
                 child: Padding(
                   padding: const EdgeInsets.all(16.0),
                   child: Column(
