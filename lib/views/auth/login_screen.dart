@@ -4,6 +4,7 @@ import '../../core/services/supabase_service.dart';
 import 'signup_screen.dart';
 import 'forgot_password_screen.dart';
 import '../user/user_main.dart';
+import '../settings/settings_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -137,7 +138,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
               // Login form card
               Card(
-                color: colors.surfaceVariant,
+                color: colors.surfaceContainerHighest.brighten(10),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12),
                 ),

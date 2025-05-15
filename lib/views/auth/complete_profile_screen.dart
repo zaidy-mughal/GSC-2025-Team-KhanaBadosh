@@ -5,6 +5,26 @@ import '../../core/services/supabase_service.dart';
 import '../../widgets/theme_toggle.dart';
 import '../user/user_main.dart';
 
+extension ColorBrightness on Color {
+  Color brighten(int amount) {
+    return Color.fromARGB(
+      alpha,
+      (red + amount).clamp(0, 255),
+      (green + amount).clamp(0, 255),
+      (blue + amount).clamp(0, 255),
+    );
+  }
+
+  Color darken(int amount) {
+    return Color.fromARGB(
+      alpha,
+      (red - amount).clamp(0, 255),
+      (green - amount).clamp(0, 255),
+      (blue - amount).clamp(0, 255),
+    );
+  }
+}
+
 class CompleteProfileScreen extends StatefulWidget {
   final String initialDisplayName;
   final String initialEmail;
@@ -266,7 +286,7 @@ class _CompleteProfileScreenState extends State<CompleteProfileScreen> {
 
               // Personal Information Card
               Card(
-                color: colors.surfaceContainerHighest,
+                color: colors.surfaceContainerHighest.brighten(10),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(16),
                 ),

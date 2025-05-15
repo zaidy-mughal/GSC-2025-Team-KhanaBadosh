@@ -1,3 +1,4 @@
+import 'package:cat_app/views/auth/complete_profile_screen.dart';
 import 'package:flutter/material.dart';
 import '../../core/services/supabase_service.dart';
 
@@ -195,7 +196,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                       _buildButton(
                         Icons.login_outlined,
                         "RETURN TO LOGIN",
-                            () => Navigator.pushReplacementNamed(context, '/login'),
+                            () => Navigator.pop(context),
                         color: colors.primary,
                       ),
                     ],
@@ -209,7 +210,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                         // Email input with underline
                         Container(
                           decoration: BoxDecoration(
-                            color: colors.surfaceVariant,
+                            color: colors.surfaceContainerHighest.brighten(10),
                             borderRadius: BorderRadius.circular(12),
                             boxShadow: [
                               BoxShadow(
@@ -296,7 +297,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
         icon: Icon(icon, size: 20),
         label: Text(
           text,
-          style: TextStyle(
+          style: const TextStyle(
             fontSize: 16,
             fontWeight: FontWeight.w600,
             letterSpacing: 0.5,

@@ -228,17 +228,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   ),
                 ),
 
-                // My Profile
-                _buildSettingItem(
-                  icon: Icons.person,
-                  title: 'My Profile',
-                  iconColor: colorScheme.primary,
-                  onTap: () {
-                    // Navigate to profile screen
-                    debugPrint('Profile tapped');
-                  },
-                ),
-
                 Padding(
                   padding: const EdgeInsets.symmetric(vertical: 16),
                   child: Divider(height: 1, color: colorScheme.onSurface.withOpacity(0.2)),

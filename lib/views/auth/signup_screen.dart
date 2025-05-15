@@ -180,7 +180,7 @@ class _SignupScreenState extends State<SignupScreen> {
 
                 // Form Card
                 Card(
-                  color: colors.surfaceVariant,
+                  color: colors.surfaceContainerHighest.brighten(10),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12),
                   ),
