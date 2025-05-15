@@ -1,28 +1,47 @@
 import 'dart:io';
+import 'package:cat_app/views/auth/complete_profile_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:image_picker/image_picker.dart';
 
-class AddCatScreen extends StatefulWidget {
-  const AddCatScreen({super.key});
+class EditCatScreen extends StatefulWidget {
+  final Map<String, dynamic> cat;
+
+  const EditCatScreen({
+    super.key,
+    required this.cat,
+  });
 
   @override
-  State<AddCatScreen> createState() => _AddCatScreenState();
+  State<EditCatScreen> createState() => _EditCatScreenState();
 }
 
-class _AddCatScreenState extends State<AddCatScreen> {
+class _EditCatScreenState extends State<EditCatScreen> {
   final _formKey = GlobalKey<FormState>();
-  final _nameController = TextEditingController();
-  final _breedController = TextEditingController();
-  final _ageController = TextEditingController();
-  final _colorController = TextEditingController();
+  late final TextEditingController _nameController;
+  late final TextEditingController _breedController;
+  late final TextEditingController _ageController;
+  late final TextEditingController _colorController;
 
   File? _imageFile;
   final _imagePicker = ImagePicker();
   String? _gender;
   bool _isLoading = false;
+  String? _currentImageUrl;
 
   final List<String> genderOptions = ['Male', 'Female'];
+
+  @override
+  void initState() {
+    super.initState();
+    // Initialize controllers with existing cat data
+    _nameController = TextEditingController(text: widget.cat['name']);
+    _breedController = TextEditingController(text: widget.cat['breed']);
+    _ageController = TextEditingController(text: widget.cat['age'].toString());
+    _colorController = TextEditingController(text: widget.cat['color']);
+    _gender = widget.cat['gender'];
+    _currentImageUrl = widget.cat['image_url'];
+  }
 
   @override
   void dispose() {
@@ -54,7 +73,7 @@ class _AddCatScreenState extends State<AddCatScreen> {
     }
   }
 
-  Future<void> _saveCat() async {
+  Future<void> _updateCat() async {
     if (!_formKey.currentState!.validate()) {
       return;
     }
@@ -72,27 +91,19 @@ class _AddCatScreenState extends State<AddCatScreen> {
         return;
       }
 
-      // Create a map for the cat data
+      // Create a map for the updated cat data
       final catData = {
-        'user_id': userId,
         'name': _nameController.text.trim(),
         'breed': _breedController.text.trim(),
         'age': int.tryParse(_ageController.text) ?? 0,
         'color': _colorController.text.trim(),
         'gender': _gender,
-        'status': false,
-        'reported_lost_at': null,
-        'has_qr_tag': true,
       };
 
-      // Save cat to database
-      final response = await Supabase.instance.client.from('cats').insert(catData).select('id').single();
-      final catId = response['id'] as int;
-
-      // If we have an image, upload it to storage
+      // If we have a new image, upload it to storage
       if (_imageFile != null) {
         final fileExtension = _imageFile!.path.split('.').last;
-        final fileName = 'cat_${catId}_${DateTime.now().millisecondsSinceEpoch}.$fileExtension';
+        final fileName = 'cat_${widget.cat['id']}_${DateTime.now().millisecondsSinceEpoch}.$fileExtension';
         final filePath = 'cat-images/$userId/$fileName';
 
         // Upload the file
@@ -100,21 +111,24 @@ class _AddCatScreenState extends State<AddCatScreen> {
             .from('cat-images')
             .upload(filePath, _imageFile!);
 
-        // Update the cat record with the image URL
+        // Update the cat data with the new image URL
         final imageUrl = Supabase.instance.client.storage
             .from('cat-images')
             .getPublicUrl(filePath);
 
-        await Supabase.instance.client
-            .from('cats')
-            .update({'image_url': imageUrl})
-            .eq('id', catId);
+        catData['image_url'] = imageUrl;
       }
+
+      // Update the cat record in the database
+      await Supabase.instance.client
+          .from('cats')
+          .update(catData)
+          .eq('id', widget.cat['id']);
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: const Text('Cat added successfully!'),
+            content: const Text('Cat updated successfully!'),
             backgroundColor: Theme.of(context).colorScheme.primary,
           ),
         );
@@ -124,7 +138,7 @@ class _AddCatScreenState extends State<AddCatScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Error adding cat: ${e.toString()}'),
+            content: Text('Error updating cat: ${e.toString()}'),
             backgroundColor: Colors.red,
           ),
         );
@@ -148,7 +162,7 @@ class _AddCatScreenState extends State<AddCatScreen> {
         backgroundColor: colors.surface,
         elevation: 0,
         title: Text(
-          "Add a New Cat",
+          "Edit Cat Details",
           style: TextStyle(
             color: colors.onSurface,
             fontWeight: FontWeight.w500,
@@ -193,9 +207,14 @@ class _AddCatScreenState extends State<AddCatScreen> {
                           image: FileImage(_imageFile!),
                           fit: BoxFit.cover,
                         )
+                            : _currentImageUrl != null && _currentImageUrl!.isNotEmpty
+                            ? DecorationImage(
+                          image: NetworkImage(_currentImageUrl!),
+                          fit: BoxFit.cover,
+                        )
                             : null,
                       ),
-                      child: _imageFile == null
+                      child: _imageFile == null && (_currentImageUrl == null || _currentImageUrl!.isEmpty)
                           ? Icon(
                         Icons.pets,
                         size: 60,
@@ -233,7 +252,7 @@ class _AddCatScreenState extends State<AddCatScreen> {
               const SizedBox(height: 10),
               Center(
                 child: Text(
-                  "Upload Cat Picture",
+                  "Change Cat Picture",
                   style: TextStyle(
                     color: colors.primary,
                     fontWeight: FontWeight.w400,
@@ -244,7 +263,7 @@ class _AddCatScreenState extends State<AddCatScreen> {
 
               // Cat Information Card
               Card(
-                color: colors.surfaceContainerHighest,
+                color: colors.surfaceContainerHighest.brighten(10),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(16),
                 ),
@@ -349,8 +368,8 @@ class _AddCatScreenState extends State<AddCatScreen> {
 
               const SizedBox(height: 40),
 
-              // Save Button
-              _buildSaveButton(context),
+              // Update Button
+              _buildUpdateButton(context),
             ],
           ),
         ),
@@ -459,13 +478,13 @@ class _AddCatScreenState extends State<AddCatScreen> {
     );
   }
 
-  Widget _buildSaveButton(BuildContext context) {
+  Widget _buildUpdateButton(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
 
     return SizedBox(
       height: 56,
       child: ElevatedButton(
-        onPressed: _isLoading ? null : _saveCat,
+        onPressed: _isLoading ? null : _updateCat,
         style: ElevatedButton.styleFrom(
           backgroundColor: colors.primary,
           foregroundColor: colors.onPrimary,
@@ -484,10 +503,10 @@ class _AddCatScreenState extends State<AddCatScreen> {
             : const Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.pets, size: 24),
+            Icon(Icons.save, size: 24),
             SizedBox(width: 8),
             Text(
-              "Add Cat",
+              "Save Changes",
               style: TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.w500,

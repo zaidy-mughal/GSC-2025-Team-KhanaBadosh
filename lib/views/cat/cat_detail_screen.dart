@@ -1,14 +1,56 @@
 import 'package:cat_app/views/auth/complete_profile_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'edit_cat_screen.dart';
 
-class CatDetailScreen extends StatelessWidget {
+class CatDetailScreen extends StatefulWidget {
   final Map<String, dynamic> cat;
+  final Function() onRefresh;
 
   const CatDetailScreen({
     super.key,
     required this.cat,
+    required this.onRefresh,
   });
+
+  @override
+  State<CatDetailScreen> createState() => _CatDetailScreenState();
+}
+
+class _CatDetailScreenState extends State<CatDetailScreen> {
+  late Map<String, dynamic> _catData;
+
+  @override
+  void initState() {
+    super.initState();
+    // Initialize with the data passed from parent
+    _catData = Map<String, dynamic>.from(widget.cat);
+  }
+
+  Future<void> _refreshCatData() async {
+    try {
+      // Fetch the latest cat data from Supabase
+      final response = await Supabase.instance.client
+          .from('cats')
+          .select()
+          .eq('id', _catData['id'])
+          .single();
+
+      // Update the state with fresh data
+      setState(() {
+        _catData = response;
+      });
+
+      // Also refresh the parent screen's data
+      widget.onRefresh();
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error refreshing cat data: ${e.toString()}')),
+        );
+      }
+    }
+  }
 
   Widget _infoRow(String label, String? value, ColorScheme colors, {bool multiLine = false}) {
     return Padding(
@@ -49,7 +91,7 @@ class CatDetailScreen extends StatelessWidget {
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Delete Cat'),
-        content: Text('Are you sure you want to delete ${cat['name']}?'),
+        content: Text('Are you sure you want to delete ${_catData['name']}?'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
@@ -75,13 +117,15 @@ class CatDetailScreen extends StatelessWidget {
       await Supabase.instance.client
           .from('cats')
           .delete()
-          .eq('id', cat['id']);
+          .eq('id', _catData['id']);
 
-      if (context.mounted) {
+      if (mounted) {
+        // Call parent's refresh function
+        widget.onRefresh();
         Navigator.pop(context, true); // Return true to indicate deletion
       }
     } catch (e) {
-      if (context.mounted) {
+      if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Error deleting cat: ${e.toString()}')),
         );
@@ -98,6 +142,24 @@ class CatDetailScreen extends StatelessWidget {
         backgroundColor: colors.primary.withOpacity(0.1),
         iconTheme: IconThemeData(color: colors.primary),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.edit),
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => EditCatScreen(cat: _catData),
+                ),
+              ).then(
+                      (value) {
+                    if (value == true) {
+                      // Refresh both this screen and parent
+                      _refreshCatData();
+                    }
+                  });
+            },
+            tooltip: 'Edit Cat',
+          ),
           IconButton(
             icon: const Icon(Icons.delete_outline),
             onPressed: () => _deleteCat(context),
@@ -116,16 +178,16 @@ class CatDetailScreen extends StatelessWidget {
               child: Column(
                 children: [
                   Hero(
-                    tag: 'cat_image_${cat['id']}',
+                    tag: 'cat_image_${_catData['id']}',
                     child: CircleAvatar(
                       radius: 60,
                       backgroundColor: colors.primary.withOpacity(0.3),
-                      backgroundImage: cat['image_url'] != null &&
-                          cat['image_url'].isNotEmpty
-                          ? NetworkImage(cat['image_url'])
+                      backgroundImage: _catData['image_url'] != null &&
+                          _catData['image_url'].isNotEmpty
+                          ? NetworkImage(_catData['image_url'])
                           : null,
-                      child: cat['image_url'] == null ||
-                          cat['image_url'].isEmpty
+                      child: _catData['image_url'] == null ||
+                          _catData['image_url'].isEmpty
                           ? Icon(
                         Icons.pets,
                         size: 60,
@@ -136,18 +198,18 @@ class CatDetailScreen extends StatelessWidget {
                   ),
                   const SizedBox(height: 16),
                   Text(
-                    cat['name'] ?? 'Unknown',
+                    _catData['name'] ?? 'Unknown',
                     style: TextStyle(
                       fontSize: 24,
                       fontWeight: FontWeight.bold,
                       color: colors.onSurface,
                     ),
                   ),
-                  if (cat['breed'] != null && cat['breed'].isNotEmpty)
+                  if (_catData['breed'] != null && _catData['breed'].isNotEmpty)
                     Padding(
                       padding: const EdgeInsets.only(top: 8.0),
                       child: Text(
-                        cat['breed'],
+                        _catData['breed'],
                         style: TextStyle(
                           fontSize: 16,
                           color: colors.onSurface.withOpacity(0.7),
@@ -178,15 +240,15 @@ class CatDetailScreen extends StatelessWidget {
                         ),
                       ),
                       const SizedBox(height: 16),
-                      _infoRow("Name", cat['name'], colors),
-                      _infoRow("Breed", cat['breed'], colors),
+                      _infoRow("Name", _catData['name'], colors),
+                      _infoRow("Breed", _catData['breed'], colors),
                       _infoRow(
                           "Age",
-                          '${cat['age']} ${int.parse(cat['age'].toString()) == 1 ? 'year' : 'years'} old',
+                          '${_catData['age']} ${int.parse(_catData['age'].toString()) == 1 ? 'year' : 'years'} old',
                           colors
                       ),
-                      _infoRow("Gender", cat['gender'], colors),
-                      _infoRow("Color", cat['color'], colors),
+                      _infoRow("Gender", _catData['gender'], colors),
+                      _infoRow("Color", _catData['color'], colors),
                     ],
                   ),
                 ),

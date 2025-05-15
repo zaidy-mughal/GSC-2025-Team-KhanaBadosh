@@ -7,11 +7,14 @@ import 'cat_detail_screen.dart';
 class CatDashboard extends StatefulWidget {
   final Map<String, dynamic> cat;
   final Function(int) onNavigateToTab;
+  final Function() onRefresh;
+
 
   const CatDashboard({
     super.key,
     required this.cat,
     required this.onNavigateToTab,
+    required this.onRefresh,
   });
 
   @override
@@ -208,15 +211,16 @@ class _CatDashboardState extends State<CatDashboard> with AutomaticKeepAliveClie
       ),
       child: Column(
         children: [
-          // Cat avatar with tap navigation to details
           GestureDetector(
             onTap: () {
               Navigator.push(
                 context,
                 MaterialPageRoute(
-                  builder: (context) => CatDetailScreen(cat: widget.cat),
+                  builder: (context) => CatDetailScreen(cat: widget.cat, onRefresh: widget.onRefresh),
                 ),
-              );
+              ).then((_) {
+                widget.onRefresh();
+              });
             },
             child: Hero(
               tag: 'cat_image_${widget.cat['id']}',

@@ -117,7 +117,7 @@ class _CatMainState extends State<CatMain> {
       CatDashboard(
         cat: _currentCat,
         onNavigateToTab: _navigateToTab,
-        // onRefresh: reloadCatData,
+        onRefresh: reloadCatData,
       ),
       CollarTagScreen(
         cat: _currentCat,

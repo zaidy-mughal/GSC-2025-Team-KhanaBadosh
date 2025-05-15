@@ -858,7 +858,7 @@ class AddOptionsMenu extends StatelessWidget {
                 _buildAddOption(
                   icon: Icons.qr_code_scanner,
                   title: 'Scan QR Code',
-                  description: 'Import from cat collar tag',
+                  description: 'Transfer cat data',
                   onTap: onAddCatViaQr, // Use the new callback directly
                   colors: colors,
                 ),
