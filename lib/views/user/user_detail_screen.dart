@@ -1,13 +1,27 @@
-import 'package:cat_app/views/auth/complete_profile_screen.dart';
+import '../auth/complete_profile_screen.dart';
 import 'package:flutter/material.dart';
+import 'edit_user_details_screen.dart';
 
-class UserDetailScreen extends StatelessWidget {
+class UserDetailScreen extends StatefulWidget { // Changed to StatefulWidget
   final Map<String, dynamic> userData;
 
   const UserDetailScreen({
     super.key,
     required this.userData,
   });
+
+  @override
+  State<UserDetailScreen> createState() => _UserDetailScreenState();
+}
+
+class _UserDetailScreenState extends State<UserDetailScreen> {
+  late Map<String, dynamic> _userData;
+
+  @override
+  void initState() {
+    super.initState();
+    _userData = Map<String, dynamic>.from(widget.userData);
+  }
 
   Widget infoRow(String label, String? value, ColorScheme colors, {bool multiLine = false}) {
     return Padding(
@@ -42,9 +56,9 @@ class UserDetailScreen extends StatelessWidget {
   }
 
   String _formatAddress() {
-    final address = userData['address'];
-    final city = userData['city'];
-    final region = userData['region'];
+    final address = _userData['address'];
+    final city = _userData['city'];
+    final region = _userData['region'];
 
     if (address == null && city == null && region == null) {
       return 'Not set';
@@ -74,7 +88,32 @@ class UserDetailScreen extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(
         backgroundColor: colors.primary.withOpacity(0.1),
-        iconTheme: IconThemeData(color: colors.onPrimary),
+        iconTheme: IconThemeData(color: colors.onSurface),
+        actions: [
+          IconButton(
+            icon: Icon(Icons.edit, color: colors.primary),
+            onPressed: () async {
+              // Navigate to edit screen and await result
+              final updatedData = await Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => EditUserDetailsScreen(userData: _userData),
+                ),
+              );
+
+              // Update the UI if data was changed
+              if (updatedData != null) {
+                setState(() {
+                  // Merge the updated data with existing data
+                  _userData = {
+                    ..._userData,
+                    ...updatedData,
+                  };
+                });
+              }
+            },
+          ),
+        ],
       ),
       body: SingleChildScrollView(
         child: Column(
@@ -87,16 +126,16 @@ class UserDetailScreen extends StatelessWidget {
               child: Column(
                 children: [
                   Hero(
-                    tag: 'user-avatar-${userData['user_id']}',
+                    tag: 'user-avatar-${_userData['user_id']}',
                     child: CircleAvatar(
                       radius: 60,
                       backgroundColor: colors.primary.withOpacity(0.3),
-                      backgroundImage: userData['profile_image_url'] != null &&
-                          userData['profile_image_url'].isNotEmpty
-                          ? NetworkImage(userData['profile_image_url'])
+                      backgroundImage: _userData['profile_image_url'] != null &&
+                          _userData['profile_image_url'].isNotEmpty
+                          ? NetworkImage(_userData['profile_image_url']) as ImageProvider<Object>
                           : null,
-                      child: userData['profile_image_url'] == null ||
-                          userData['profile_image_url'].isEmpty
+                      child: _userData['profile_image_url'] == null ||
+                          _userData['profile_image_url'].isEmpty
                           ? Icon(
                         Icons.person,
                         size: 60,
@@ -107,18 +146,18 @@ class UserDetailScreen extends StatelessWidget {
                   ),
                   const SizedBox(height: 16),
                   Text(
-                    userData['display_name'] ?? 'No Display Name',
+                    _userData['display_name'] ?? 'No Display Name',
                     style: TextStyle(
                       fontSize: 24,
                       fontWeight: FontWeight.bold,
                       color: colors.onSurface,
                     ),
                   ),
-                  if (userData['email'] != null && userData['email'].isNotEmpty)
+                  if (_userData['email'] != null && _userData['email'].isNotEmpty)
                     Padding(
                       padding: const EdgeInsets.only(top: 8.0),
                       child: Text(
-                        userData['email'],
+                        _userData['email'],
                         style: TextStyle(
                           fontSize: 16,
                           color: colors.onSurface.withOpacity(0.7),
@@ -149,11 +188,11 @@ class UserDetailScreen extends StatelessWidget {
                         ),
                       ),
                       const SizedBox(height: 16),
-                      infoRow("Name", userData['name']?.toString(), colors),
-                      infoRow("Email", userData['email']?.toString(), colors),
-                      infoRow("Phone Number", userData['number']?.toString(), colors),
-                      infoRow("Age", userData['age']?.toString(), colors),
-                      infoRow("Gender", userData['gender']?.toString(), colors),
+                      infoRow("Name", _userData['name']?.toString(), colors),
+                      infoRow("Email", _userData['email']?.toString(), colors),
+                      infoRow("Phone Number", _userData['number']?.toString(), colors),
+                      infoRow("Age", _userData['age']?.toString(), colors),
+                      infoRow("Gender", _userData['gender']?.toString(), colors),
                       infoRow("Address", _formatAddress(), colors, multiLine: true),
                     ],
                   ),

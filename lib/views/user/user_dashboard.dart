@@ -138,8 +138,11 @@ class _UserDashboardState extends State<UserDashboard> {
         builder: (context) => UserDetailScreen(userData: _userDataManager.userData!),
       ),
     ).then((_) {
-      // Optional: Refresh data when returning from details screen
-      // if you expect data might change there
+      _userDataManager.refreshUserData().then((_) {
+        if (mounted) {
+          setState(() {});
+        }
+      });
       if (mounted) {
         setState(() {});
       }
