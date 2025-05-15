@@ -3,6 +3,27 @@ import 'dart:async';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 
+// Add the color brightness extension just like in cat_dashboard.dart
+extension ColorBrightness on Color {
+  Color brighten(int amount) {
+    return Color.fromARGB(
+      alpha,
+      (red + amount).clamp(0, 255),
+      (green + amount).clamp(0, 255),
+      (blue + amount).clamp(0, 255),
+    );
+  }
+
+  Color darken(int amount) {
+    return Color.fromARGB(
+      alpha,
+      (red - amount).clamp(0, 255),
+      (green - amount).clamp(0, 255),
+      (blue - amount).clamp(0, 255),
+    );
+  }
+}
+
 class CollarTagScreen extends StatefulWidget {
   final Map<String, dynamic> cat;
   final Future<void> Function() onRefresh;
@@ -388,6 +409,8 @@ class _CollarTagScreenState extends State<CollarTagScreen> {
                 width: 1,
               ),
             ),
+            // Apply the brightening effect like in cat_dashboard
+            color: colors.surface.brighten(10),
             child: Column(
               children: [
                 // QR code image
@@ -395,7 +418,7 @@ class _CollarTagScreenState extends State<CollarTagScreen> {
                   padding: const EdgeInsets.all(24),
                   width: double.infinity,
                   decoration: BoxDecoration(
-                    color: colors.surface,
+                    color: colors.surface.brighten(15),
                     borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
                   ),
                   child: Column(
@@ -479,6 +502,8 @@ class _CollarTagScreenState extends State<CollarTagScreen> {
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(12),
             ),
+            // Apply the brightening effect
+            color: colors.surface.brighten(5),
             child: Padding(
               padding: const EdgeInsets.all(16.0),
               child: Column(
@@ -563,7 +588,7 @@ class _CollarTagScreenState extends State<CollarTagScreen> {
                 );
               },
               style: ElevatedButton.styleFrom(
-                backgroundColor: colors.surface,
+                backgroundColor: colors.surface.brighten(12),
                 foregroundColor: colors.primary,
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12),
@@ -594,7 +619,7 @@ class _CollarTagScreenState extends State<CollarTagScreen> {
     const double tagPrice = 4149.72;
 
     return SingleChildScrollView(
-      physics: const ClampingScrollPhysics(), // Removed AlwaysScrollableScrollPhysics
+      physics: const ClampingScrollPhysics(),
       padding: const EdgeInsets.all(16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -609,6 +634,8 @@ class _CollarTagScreenState extends State<CollarTagScreen> {
                 width: 1,
               ),
             ),
+            // Apply the brightening effect like in cat_dashboard
+            color: colors.surface.brighten(10),
             child: Column(
               children: [
                 // Tag image
@@ -784,7 +811,8 @@ class _CollarTagScreenState extends State<CollarTagScreen> {
               }
                   : _purchaseTag,
               style: ElevatedButton.styleFrom(
-                backgroundColor: _hasQrTag ? colors.surface : colors.primary,
+                // Apply brightening effect to button background
+                backgroundColor: _hasQrTag ? colors.surface.brighten(12) : colors.primary,
                 foregroundColor: _hasQrTag ? colors.primary : colors.onPrimary,
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12),
@@ -817,48 +845,57 @@ class _CollarTagScreenState extends State<CollarTagScreen> {
   }) {
     final colors = Theme.of(context).colorScheme;
 
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 16),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              color: colors.primary.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(8),
+    return Card(
+      elevation: 1,
+      margin: const EdgeInsets.only(bottom: 12),
+      // Apply brightening effect to feature cards
+      color: colors.surface.brighten(8),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: colors.primary.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Icon(
+                icon,
+                color: colors.primary,
+                size: 24,
+              ),
             ),
-            child: Icon(
-              icon,
-              color: colors.primary,
-              size: 24,
-            ),
-          ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                    color: colors.onSurface,
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: colors.onSurface,
+                    ),
                   ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  description,
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: colors.onSurface.withOpacity(0.7),
+                  const SizedBox(height: 4),
+                  Text(
+                    description,
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: colors.onSurface.withOpacity(0.7),
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

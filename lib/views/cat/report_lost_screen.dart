@@ -1,6 +1,26 @@
-
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+
+// Add the ColorBrightness extension just like in cat_dashboard.dart
+extension ColorBrightness on Color {
+  Color brighten(int amount) {
+    return Color.fromARGB(
+      alpha,
+      (red + amount).clamp(0, 255),
+      (green + amount).clamp(0, 255),
+      (blue + amount).clamp(0, 255),
+    );
+  }
+
+  Color darken(int amount) {
+    return Color.fromARGB(
+      alpha,
+      (red - amount).clamp(0, 255),
+      (green - amount).clamp(0, 255),
+      (blue - amount).clamp(0, 255),
+    );
+  }
+}
 
 class ReportLostScreen extends StatefulWidget {
   final Map<String, dynamic> cat;
@@ -154,36 +174,31 @@ class _ReportLostScreenState extends State<ReportLostScreen> {
     return Scaffold(
       backgroundColor: colors.surface,
       body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Hero header section
-              _buildHeader(colors),
+        child: SingleChildScrollView(
+          child: Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Hero header section
+                _buildHeader(colors),
 
-              const SizedBox(height: 20),
+                const SizedBox(height: 20),
 
-              // Status toggle card - enhanced with dashboard-like styling
-              _buildStatusToggleCard(colors),
+                // Status toggle card - enhanced with dashboard-like styling
+                _buildStatusToggleCard(colors),
 
-              const SizedBox(height: 20),
+                const SizedBox(height: 20),
 
-              // Form fields that appear when reporting lost
-              if (_isReportingLost)
-                Expanded(
-                  child: Form(
-                    key: _formKey,
-                    child: _buildLostDetailsForm(colors),
-                  ),
-                ),
+                // Form fields that appear when reporting lost
+                if (_isReportingLost)
+                  _buildLostDetailsForm(colors),
 
-              // Information when not reporting lost
-              if (!_isReportingLost)
-                Expanded(
-                  child: _buildNotLostContent(colors),
-                ),
-            ],
+                // Information when not reporting lost
+                if (!_isReportingLost)
+                  _buildNotLostContent(colors),
+              ],
+            ),
           ),
         ),
       ),
@@ -191,14 +206,24 @@ class _ReportLostScreenState extends State<ReportLostScreen> {
   }
 
   Widget _buildHeader(ColorScheme colors) {
+    final headerColor = _isReportingLost
+        ? colors.primary.withOpacity(0.15)
+        : colors.primary.withOpacity(0.15);
+
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: _isReportingLost
-            ? colors.primary.withOpacity(0.15)
-            : colors.primary.withOpacity(0.15),
+        color: headerColor,
         borderRadius: BorderRadius.circular(16),
+        // Add subtle shadow for depth like in cat_dashboard
+        boxShadow: [
+          BoxShadow(
+            color: colors.shadow.withOpacity(0.1),
+            blurRadius: 4,
+            offset: const Offset(0, 2),
+          ),
+        ],
       ),
       child: Row(
         children: [
@@ -279,6 +304,10 @@ class _ReportLostScreenState extends State<ReportLostScreen> {
     return Card(
       elevation: 2,
       shadowColor: colors.shadow.withOpacity(0.5),
+      // Use brighten extension for card color
+      color: Theme.of(context).brightness == Brightness.light
+          ? colors.surface.brighten(10)
+          : colors.surface.brighten(15),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16),
         side: BorderSide(
@@ -327,6 +356,7 @@ class _ReportLostScreenState extends State<ReportLostScreen> {
                   activeTrackColor: colors.primary.withOpacity(0.4),
                   inactiveThumbColor: colors.primary,
                   inactiveTrackColor: colors.primary.withOpacity(0.4),
+
                   onChanged: (value) {
                     // Don't directly set the state - check if confirmation needed
                     if (_isReportingLost != value) {
@@ -389,13 +419,18 @@ class _ReportLostScreenState extends State<ReportLostScreen> {
   }
 
   Widget _buildLostDetailsForm(ColorScheme colors) {
-    return SingleChildScrollView(
+    return Form(
+      key: _formKey,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Card(
             elevation: 1,
             margin: EdgeInsets.zero,
+            // Use brighten extension for card color
+            color: Theme.of(context).brightness == Brightness.light
+                ? colors.surface.brighten(10)
+                : colors.surface.brighten(15),
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(16),
             ),
@@ -499,7 +534,8 @@ class _ReportLostScreenState extends State<ReportLostScreen> {
                       ),
                       prefixIcon: const Icon(Icons.location_on_outlined),
                       filled: true,
-                      fillColor: colors.surface,
+                      // Use brighten extension for field background
+                      fillColor: colors.surface.brighten(7),
                       contentPadding: const EdgeInsets.symmetric(
                         vertical: 16,
                         horizontal: 16,
@@ -548,6 +584,8 @@ class _ReportLostScreenState extends State<ReportLostScreen> {
               ),
             ),
           ),
+          // Add some padding at the bottom to ensure space after the button
+          const SizedBox(height: 24),
         ],
       ),
     );
@@ -561,6 +599,10 @@ class _ReportLostScreenState extends State<ReportLostScreen> {
         Card(
           elevation: 1,
           margin: const EdgeInsets.symmetric(vertical: 20),
+          // Use brighten extension for card color
+          color: Theme.of(context).brightness == Brightness.light
+              ? colors.surface.brighten(10)
+              : colors.surface.brighten(15),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(16),
           ),

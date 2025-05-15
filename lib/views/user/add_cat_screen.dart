@@ -80,7 +80,8 @@ class _AddCatScreenState extends State<AddCatScreen> {
         'age': int.tryParse(_ageController.text) ?? 0,
         'color': _colorController.text.trim(),
         'gender': _gender,
-        'status': false, // Setting status to false by default
+        'status': false,
+        'reported_lost_at': null,
       };
 
       // Save cat to database
