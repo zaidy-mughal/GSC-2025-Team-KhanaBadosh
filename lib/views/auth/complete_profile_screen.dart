@@ -124,12 +124,13 @@ class _CompleteProfileScreenState extends State<CompleteProfileScreen> {
         'name': _nameController.text.trim(),
         'display_name': _nameController.text.trim(),
         'age': _ageController.text.trim(),
-        'number': _phoneController.text.trim(), // Save phone number
-        'email': widget.initialEmail, // Save email automatically
+        'number': _phoneController.text.trim(),
+        'email': widget.initialEmail,
         'gender': _gender,
         'address': _addressController.text.trim(),
         'city': _cityController.text.trim(),
         'region': _regionController.text.trim(),
+        'is_data_added': true,
       };
 
       // Update profile in Supabase with image if selected
