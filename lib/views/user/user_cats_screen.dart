@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../cat/cat_main.dart';
 import 'add_cat_screen.dart';
 import 'add_qr_cat_screen.dart';
 import 'package:flutter_cache_manager/flutter_cache_manager.dart';
 import 'package:cached_network_image/cached_network_image.dart';
-
 
 // Extension to adjust color brightness
 extension ColorBrightness on Color {
@@ -155,7 +155,7 @@ class CatsDataCache {
 // Improved CatCacheManager with persistent storage
 class CatCacheManager extends CacheManager {
   static const key = 'catAppCacheKey';
-  static const Duration cacheDuration = Duration(days: 14); // Extended cache duration
+  static const Duration cacheDuration = Duration(minutes:  30);
 
   static final CatCacheManager _instance = CatCacheManager._();
   factory CatCacheManager() => _instance;
@@ -253,24 +253,45 @@ class _CatsListScreenState extends State<CatsListScreen> with SingleTickerProvid
   }
 
   Future<void> _refreshCats() async {
+    // Show a loading indicator or animation if you want
+    setState(() {
+      // You could set a refreshing state here if needed
+      // _isRefreshing = true;
+    });
+
     try {
       // Clear the image cache only when explicitly refreshing
       await CatCacheManager().emptyCache();
       await _catsCache.fetchCats(forceRefresh: true);
 
       if (mounted) {
+        // Optional: Add haptic feedback for successful refresh
+        HapticFeedback.mediumImpact();
+
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('Cat data refreshed'),
             duration: Duration(seconds: 1),
+            behavior: SnackBarBehavior.floating, // Makes it look nicer
           ),
         );
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error refreshing cats: ${e.toString()}')),
+          SnackBar(
+            content: Text('Error refreshing cats: ${e.toString()}'),
+            backgroundColor: Colors.red.shade700,
+            behavior: SnackBarBehavior.floating,
+          ),
         );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          // Reset any refresh state if needed
+          // _isRefreshing = false;
+        });
       }
     }
   }
