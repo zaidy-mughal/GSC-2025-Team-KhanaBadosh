@@ -542,71 +542,71 @@ class _CollarTagScreenState extends State<CollarTagScreen> {
           const SizedBox(height: 32),
 
           // Manage button
-          SizedBox(
-            width: double.infinity,
-            height: 56,
-            child: ElevatedButton(
-              onPressed: () {
-                // Open tag management dialog
-                showDialog(
-                  context: context,
-                  builder: (context) => AlertDialog(
-                    title: const Text('Manage QR Tag'),
-                    content: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        ListTile(
-                          leading: const Icon(Icons.info_outline),
-                          title: const Text('Features'),
-                          onTap: () {
-                            Navigator.pop(context);
-                            // Show features dialog
-                            _showFeaturesDialog();
-                          },
-                        ),
-                        ListTile(
-                          leading: const Icon(Icons.delete_outline, color: Colors.red),
-                          title: const Text(
-                            'Delete QR Code',
-                            style: TextStyle(color: Colors.red),
-                          ),
-                          onTap: () {
-                            Navigator.pop(context);
-                            _deleteQrTag();
-                          },
-                        ),
-                      ],
-                    ),
-                    actions: [
-                      TextButton(
-                        onPressed: () => Navigator.pop(context),
-                        child: const Text('Close'),
-                      ),
-                    ],
-                  ),
-                );
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: colors.surface.brighten(12),
-                foregroundColor: colors.primary,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  side: BorderSide(
-                    color: colors.primary,
-                    width: 1,
-                  ),
-                ),
-              ),
-              child: const Text(
-                'Manage Tag',
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ),
-          ),
+          // SizedBox(
+          //   width: double.infinity,
+          //   height: 56,
+          //   child: ElevatedButton(
+          //     onPressed: () {
+          //       // Open tag management dialog
+          //       showDialog(
+          //         context: context,
+          //         builder: (context) => AlertDialog(
+          //           title: const Text('Manage QR Tag'),
+          //           content: Column(
+          //             mainAxisSize: MainAxisSize.min,
+          //             crossAxisAlignment: CrossAxisAlignment.start,
+          //             children: [
+          //               ListTile(
+          //                 leading: const Icon(Icons.info_outline),
+          //                 title: const Text('Features'),
+          //                 onTap: () {
+          //                   Navigator.pop(context);
+          //                   // Show features dialog
+          //                   _showFeaturesDialog();
+          //                 },
+          //               ),
+          //               ListTile(
+          //                 leading: const Icon(Icons.delete_outline, color: Colors.red),
+          //                 title: const Text(
+          //                   'Delete QR Code',
+          //                   style: TextStyle(color: Colors.red),
+          //                 ),
+          //                 onTap: () {
+          //                   Navigator.pop(context);
+          //                   _deleteQrTag();
+          //                 },
+          //               ),
+          //             ],
+          //           ),
+          //           actions: [
+          //             TextButton(
+          //               onPressed: () => Navigator.pop(context),
+          //               child: const Text('Close'),
+          //             ),
+          //           ],
+          //         ),
+          //       );
+          //     },
+          //     style: ElevatedButton.styleFrom(
+          //       backgroundColor: colors.surface.brighten(12),
+          //       foregroundColor: colors.primary,
+          //       shape: RoundedRectangleBorder(
+          //         borderRadius: BorderRadius.circular(12),
+          //         side: BorderSide(
+          //           color: colors.primary,
+          //           width: 1,
+          //         ),
+          //       ),
+          //     ),
+          //     child: const Text(
+          //       'Manage Tag',
+          //       style: TextStyle(
+          //         fontSize: 16,
+          //         fontWeight: FontWeight.bold,
+          //       ),
+          //     ),
+          //   ),
+          // ),
           // Add space at the bottom
           const SizedBox(height: 50),
         ],
