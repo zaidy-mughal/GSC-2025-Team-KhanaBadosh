@@ -21,7 +21,7 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
 
     // Setup animation controller
     _animationController = AnimationController(
-      duration: const Duration(milliseconds: 6500),
+      duration: const Duration(milliseconds: 3000),
       vsync: this,
     );
 
@@ -107,7 +107,7 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
     final double progressLineWidth = progressLineEnd - progressLineStart;
 
     return Scaffold(
-      backgroundColor: Theme.of(context).colorScheme.background,
+      backgroundColor: Theme.of(context).colorScheme.surface,
       body: Stack(
         children: [
           // Progress Line (background)
@@ -157,12 +157,12 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
                 left: adjustedX,
                 bottom: MediaQuery.of(context).size.height * 0.22,
                 child: SizedBox(
-                  width: 80,
-                  height: 80,
+                  width: 70,
+                  height: 70,
                   child: Image.asset(
                     'assets/images/cat_silhouette.png',
                     fit: BoxFit.contain,
-                    color: Theme.of(context).colorScheme.primary,
+                    color: Theme.of(context).colorScheme.onPrimary.withOpacity(0.7),
                   ),
                 ),
               );
@@ -176,8 +176,8 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
               children: [
                 Image.asset(
                   'assets/images/logo.png',
-                  width: 180,
-                  height: 180,
+                  width: 220,
+                  height: 220,
                   fit: BoxFit.contain,
                 ),
               ],
@@ -193,7 +193,7 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
               child: Text(
                 'Developed by Team KhanaBadosh',
                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: Theme.of(context).colorScheme.onBackground.withOpacity(0.7),
+                  color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
                 ),
               ),
             ),

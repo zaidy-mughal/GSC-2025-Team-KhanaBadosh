@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter_cache_manager/flutter_cache_manager.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'lost_cat_details_screen.dart';
 import 'qr_found_screen.dart';
 
@@ -149,6 +150,31 @@ class _LostAndFoundScreenState extends State<LostAndFoundScreen> with SingleTick
 
   Future<void> _refreshLostCats() async {
     await _loadLostCats(searchQuery: _searchQuery);
+  }
+
+  // Function to open external URL
+  Future<void> _launchUrl(String url) async {
+    final Uri uri = Uri.parse(url);
+    if (!await launchUrl(uri, mode: LaunchMode.externalApplication)) {
+      // Show error dialog if URL can't be launched
+      if (mounted) {
+        showDialog(
+          context: context,
+          builder: (BuildContext context) {
+            return AlertDialog(
+              title: const Text('Error'),
+              content: const Text('Could not open the form. Please try again later.'),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(context).pop(),
+                  child: const Text('OK'),
+                ),
+              ],
+            );
+          },
+        );
+      }
+    }
   }
 
   @override
@@ -354,74 +380,149 @@ class _LostAndFoundScreenState extends State<LostAndFoundScreen> with SingleTick
   }
 
   Widget _buildFoundTab(ColorScheme colors) {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          // Top part with illustration
-          Container(
-            width: 150,
-            height: 150,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: colors.primary.withOpacity(0.1),
-            ),
-            child: Icon(
-              Icons.qr_code_scanner_rounded,
-              size: 80,
-              color: colors.primary.withOpacity(0.3),
-            ),
-          ),
-          const SizedBox(height: 32),
-
-          // Text
-          Text(
-            'Found a Cat?',
-            style: TextStyle(
-              fontSize: 24,
-              fontWeight: FontWeight.bold,
-              color: colors.onSurface,
-            ),
-          ),
-          const SizedBox(height: 16),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 32),
-            child: Text(
-              'Scan the QR code on their collar tag to help reunite them with their owner',
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: 16,
-                color: colors.onSurface.withOpacity(0.7),
-              ),
-            ),
-          ),
-          const SizedBox(height: 40),
-
-          // Scan button
-          ElevatedButton.icon(
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => const QRFoundScreen(),
+    return SingleChildScrollView(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 24),
+        child: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              // Top part with illustration
+              Container(
+                width: 150,
+                height: 150,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: colors.primary.withOpacity(0.1),
                 ),
-              );
-            },
-            icon: const Icon(Icons.qr_code_scanner),
-            label: const Text('Scan QR Code'),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: colors.primary,
-              foregroundColor: colors.onPrimary,
-              padding: const EdgeInsets.symmetric(
-                horizontal: 32,
-                vertical: 16,
+                child: Icon(
+                  Icons.qr_code_scanner_rounded,
+                  size: 80,
+                  color: colors.primary.withOpacity(0.3),
+                ),
               ),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(30),
+              const SizedBox(height: 32),
+
+              // Text
+              Text(
+                'Found a Cat?',
+                style: TextStyle(
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold,
+                  color: colors.onSurface,
+                ),
               ),
-            ),
+              const SizedBox(height: 16),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 32),
+                child: Text(
+                  'Scan the QR code on their collar tag to help reunite them with their owner',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 16,
+                    color: colors.onSurface.withOpacity(0.7),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 32),
+
+              // Scan button
+              ElevatedButton.icon(
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const QRFoundScreen(),
+                    ),
+                  );
+                },
+                icon: const Icon(Icons.qr_code_scanner),
+                label: const Text('Scan QR Code'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: colors.primary,
+                  foregroundColor: colors.onPrimary,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 32,
+                    vertical: 16,
+                  ),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(30),
+                  ),
+                ),
+              ),
+
+              const SizedBox(height: 24),
+
+              // Divider with text
+              Row(
+                children: [
+                  Expanded(
+                    child: Divider(
+                      color: colors.onSurface.withOpacity(0.2),
+                      thickness: 1,
+                      indent: 32,
+                      endIndent: 16,
+                    ),
+                  ),
+                  Text(
+                    'OR',
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: colors.onSurface.withOpacity(0.5),
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  Expanded(
+                    child: Divider(
+                      color: colors.onSurface.withOpacity(0.2),
+                      thickness: 1,
+                      indent: 16,
+                      endIndent: 32,
+                    ),
+                  ),
+                ],
+              ),
+
+              const SizedBox(height: 24),
+
+              // Text for no QR code
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 32),
+                child: Text(
+                  'No QR code on the collar?',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w500,
+                    color: colors.onSurface,
+                  ),
+                ),
+              ),
+
+              const SizedBox(height: 16),
+
+              // Button to open external form
+              OutlinedButton.icon(
+                onPressed: () {
+                  _launchUrl('https://forms.gle/9qAbKzhS74zknorT7');
+                },
+                icon: const Icon(Icons.description_outlined),
+                label: const Text('Fill Out Report Form'),
+                style: OutlinedButton.styleFrom(
+                  side: BorderSide(color: colors.primary),
+                  foregroundColor: colors.primary,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 24,
+                    vertical: 12,
+                  ),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(30),
+                  ),
+                ),
+              ),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }
