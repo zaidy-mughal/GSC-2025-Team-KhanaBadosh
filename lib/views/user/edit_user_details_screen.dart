@@ -90,12 +90,12 @@ class _EditUserDetailsScreenState extends State<EditUserDetailsScreen> {
 
       // Upload to Supabase Storage
       await supabase.storage
-          .from('profile_images')
+          .from('profile-images')
           .upload(fileName, _selectedImage!, fileOptions: const FileOptions(upsert: true));
 
       // Get public URL
       final imageUrl = supabase.storage
-          .from('profile_images')
+          .from('profile-images')
           .getPublicUrl(fileName);
 
       return imageUrl;
