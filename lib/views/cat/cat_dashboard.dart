@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import '../user/user_main.dart';
 import 'cat_detail_screen.dart';
 
 class CatDashboard extends StatefulWidget {
@@ -27,7 +26,6 @@ class _CatDashboardState extends State<CatDashboard> with AutomaticKeepAliveClie
   bool get wantKeepAlive => true;
 
   // Save a global key for accessing a valid context
-  final GlobalKey<ScaffoldMessengerState> _scaffoldMessengerKey = GlobalKey<ScaffoldMessengerState>();
 
   void _showSellCatDialog(BuildContext context) {
     final TextEditingController emailController = TextEditingController();
@@ -121,7 +119,7 @@ class _CatDashboardState extends State<CatDashboard> with AutomaticKeepAliveClie
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   const Text(
-                    'Scan QR to Transfer',
+                    'Scan QR to Transfer Data',
                     style: TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.bold
@@ -130,7 +128,7 @@ class _CatDashboardState extends State<CatDashboard> with AutomaticKeepAliveClie
                   const SizedBox(height: 16),
                   const Text('Ask the new owner to scan this QR code:'),
                   const SizedBox(height: 16),
-                  Container(
+                  SizedBox(
                     width: 200.0,
                     height: 200.0,
                     child: QrImageView(
@@ -155,8 +153,8 @@ class _CatDashboardState extends State<CatDashboard> with AutomaticKeepAliveClie
       // Use ScaffoldMessenger directly if widget is still mounted
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error: ${e.toString()}'),
+          const SnackBar(
+            content: Text('Error: No User Found with this email'),
             backgroundColor: Colors.red,
           ),
         );
@@ -355,22 +353,6 @@ class _CatDashboardState extends State<CatDashboard> with AutomaticKeepAliveClie
             mainAxisSpacing: 12,
             childAspectRatio: 1.2,
             children: [
-              // Back to User Dashboard card
-              ActionCard(
-                icon: Icons.home,
-                title: 'User Dashboard',
-                value: 'Back to User Account',
-                description: 'Return to user profile',
-                color: colors.primary,
-                onTap: () {
-                  Navigator.of(context).pushReplacement(
-                    MaterialPageRoute(
-                      builder: (context) => const UserMain(),
-                    ),
-                  );
-                },
-              ),
-
               // Health Records card
               ActionCard(
                 icon: Icons.medical_services,
@@ -381,7 +363,7 @@ class _CatDashboardState extends State<CatDashboard> with AutomaticKeepAliveClie
                 onTap: () => widget.onNavigateToTab(2), // Navigate to Health tab
               ),
 
-              // Collar Tag card
+              // Collar Tag card .
               ActionCard(
                 icon: Icons.qr_code,
                 title: 'Collar Tag',
@@ -404,7 +386,7 @@ class _CatDashboardState extends State<CatDashboard> with AutomaticKeepAliveClie
               // Sell My Cat card
               ActionCard(
                 icon: Icons.sell,
-                title: 'Transfer Cat',
+                title: 'Sell Cat',
                 value: 'New Owner Transfer',
                 description: 'Transfer ownership via QR code',
                 color: Colors.amber,
