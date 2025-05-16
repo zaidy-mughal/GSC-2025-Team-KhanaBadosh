@@ -153,13 +153,6 @@ class _UserDashboardState extends State<UserDashboard> {
     widget.onNavigateToTab(tabIndex);
   }
 
-  void _showCatTipsDialog() {
-    showDialog(
-      context: context,
-      builder: (context) => const CatTipsDialog(),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
@@ -197,7 +190,6 @@ class _UserDashboardState extends State<UserDashboard> {
                 onLostFoundPressed: () => _navigateToTab(2),
                 onNewsPressed: () => _navigateToTab(3),
                 onChatPressed: () => _navigateToTab(4),
-                onTipsPressed: _showCatTipsDialog,
               ),
               const SizedBox(height: 20),
             ],
@@ -221,6 +213,7 @@ class UserCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
+    final greeting = _getGreeting();
 
     return Card(
       elevation: 1, // Consistent minimal elevation
@@ -234,12 +227,12 @@ class UserCard extends StatelessWidget {
         onTap: onTap,
         borderRadius: BorderRadius.circular(12),
         child: Padding(
-          padding: const EdgeInsets.all(16.0),
+          padding: const EdgeInsets.symmetric(vertical: 24.0, horizontal: 16.0),
           child: Row(
             children: [
-              // Profile Image
+              // Profile Image - Larger size
               CircleAvatar(
-                radius: 30,
+                radius: 40,
                 backgroundColor: colorScheme.primary.withOpacity(0.2),
                 backgroundImage: userData['profile_image_url'] != null &&
                     userData['profile_image_url'].isNotEmpty
@@ -249,32 +242,53 @@ class UserCard extends StatelessWidget {
                     userData['profile_image_url'].isEmpty
                     ? Icon(
                   Icons.person,
-                  size: 30,
+                  size: 40,
                   color: colorScheme.primary,
                 )
                     : null,
               ),
               const SizedBox(width: 16),
-              // Display Name
+              // Display Name and Welcome Message
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      userData['display_name'] ?? 'No Display Name',
+                      greeting,
                       style: TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                        color: colorScheme.onSurface,
+                        fontSize: 16,
+                        fontWeight: FontWeight.w500,
+                        color: colorScheme.primary,
                       ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      'Tap to view details',
+                      userData['display_name'] ?? 'No Display Name',
                       style: TextStyle(
-                        fontSize: 14,
-                        color: colorScheme.onSurface.withOpacity(0.7),
+                        fontSize: 22,
+                        fontWeight: FontWeight.bold,
+                        color: colorScheme.onSurface,
                       ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    const SizedBox(height: 8),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            'Tap to view your profile details',
+                            style: TextStyle(
+                              fontSize: 14,
+                              color: colorScheme.onSurface.withOpacity(0.7),
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ],
                     ),
                   ],
                 ),
@@ -290,6 +304,19 @@ class UserCard extends StatelessWidget {
       ),
     );
   }
+
+  // Helper method to generate a friendly greeting based on time of day
+  String _getGreeting() {
+    final hour = DateTime.now().hour;
+    if (hour < 12) {
+      return 'Good morning,';
+    } else if (hour < 17) {
+      return 'Good afternoon,';
+    } else {
+      return 'Good evening,';
+    }
+  }
+
 }
 
 class DashboardActions extends StatelessWidget {
@@ -298,7 +325,6 @@ class DashboardActions extends StatelessWidget {
   final VoidCallback onLostFoundPressed;
   final VoidCallback onNewsPressed;
   final VoidCallback onChatPressed;
-  final VoidCallback onTipsPressed;
 
   const DashboardActions({
     super.key,
@@ -307,7 +333,6 @@ class DashboardActions extends StatelessWidget {
     required this.onLostFoundPressed,
     required this.onNewsPressed,
     required this.onChatPressed,
-    required this.onTipsPressed,
   });
 
   @override
@@ -377,16 +402,6 @@ class DashboardActions extends StatelessWidget {
                 color: Colors.green,
                 onTap: onChatPressed,
                 showBadge: true,
-              ),
-
-              // Cat Tips card
-              ActionCard(
-                icon: Icons.info_outline,
-                title: 'Cat Tips',
-                value: 'Care Tips & Advice',
-                description: 'Best practices for cat care',
-                color: Colors.purple,
-                onTap: onTipsPressed,
               ),
             ],
           ),
@@ -495,170 +510,6 @@ class ActionCard extends StatelessWidget {
           ),
         ),
       ),
-    );
-  }
-}
-
-class CatTipsDialog extends StatelessWidget {
-  const CatTipsDialog({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-
-    return Dialog(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-      elevation: 4, // Slightly higher elevation for dialog
-      shadowColor: colorScheme.shadow.withOpacity(0.7),
-      backgroundColor: Theme.of(context).brightness == Brightness.light
-          ? colorScheme.surface.brighten(15)
-          : colorScheme.surface.brighten(20),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Padding(
-            padding: const EdgeInsets.all(20),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: colorScheme.primary.withOpacity(0.2),
-                        shape: BoxShape.circle,
-                      ),
-                      child: Icon(Icons.info_outline, color: colorScheme.primary, size: 28),
-                    ),
-                    const SizedBox(width: 16),
-                    Text(
-                      'Cat Care Tips',
-                      style: TextStyle(
-                        fontSize: 22,
-                        fontWeight: FontWeight.bold,
-                        color: colorScheme.onSurface,
-                      ),
-                    ),
-                  ],
-                ),
-                IconButton(
-                  icon: Icon(Icons.close, color: colorScheme.onSurface),
-                  onPressed: () => Navigator.of(context).pop(),
-                ),
-              ],
-            ),
-          ),
-          Divider(height: 1, color: colorScheme.onSurface.withOpacity(0.2)),
-          Flexible(
-            child: SingleChildScrollView(
-              child: Padding(
-                padding: const EdgeInsets.all(20),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    _buildTipItem(
-                      context,
-                      icon: Icons.water_drop,
-                      title: 'Fresh Water Daily',
-                      description: 'Make sure your cat always has access to clean water.',
-                    ),
-                    const SizedBox(height: 16),
-                    _buildTipItem(
-                      context,
-                      icon: Icons.restaurant,
-                      title: 'Balanced Diet',
-                      description: 'Feed your cat high-quality food appropriate for their age and health needs.',
-                    ),
-                    const SizedBox(height: 16),
-                    _buildTipItem(
-                      context,
-                      icon: Icons.fitness_center,
-                      title: 'Regular Exercise',
-                      description: 'Engage your cat in play to keep them physically active and mentally stimulated.',
-                    ),
-                    const SizedBox(height: 16),
-                    _buildTipItem(
-                      context,
-                      icon: Icons.medical_services,
-                      title: 'Regular Vet Visits',
-                      description: 'Schedule annual checkups to ensure your cat stays healthy and prevent issues.',
-                    ),
-                    const SizedBox(height: 16),
-                    _buildTipItem(
-                      context,
-                      icon: Icons.cleaning_services,
-                      title: 'Clean Litter Box',
-                      description: 'Clean the litter box daily and change litter regularly to maintain hygiene.',
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.all(16),
-            child: ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: colorScheme.primary,
-                foregroundColor: colorScheme.onPrimary,
-                minimumSize: const Size(double.infinity, 50),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-              ),
-              onPressed: () => Navigator.of(context).pop(),
-              child: const Text('Got it', style: TextStyle(fontSize: 16)),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildTipItem(BuildContext context, {
-    required IconData icon,
-    required String title,
-    required String description,
-  }) {
-    final colorScheme = Theme.of(context).colorScheme;
-
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Container(
-          padding: const EdgeInsets.all(8),
-          decoration: BoxDecoration(
-            color: colorScheme.primary.withOpacity(0.1),
-            shape: BoxShape.circle,
-          ),
-          child: Icon(icon, size: 20, color: colorScheme.primary),
-        ),
-        const SizedBox(width: 16),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                title,
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.w600,
-                  color: colorScheme.onSurface,
-                ),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                description,
-                style: TextStyle(
-                  fontSize: 15,
-                  color: colorScheme.onSurface.withOpacity(0.7),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ],
     );
   }
 }

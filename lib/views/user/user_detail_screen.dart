@@ -153,17 +153,6 @@ class _UserDetailScreenState extends State<UserDetailScreen> {
                       color: colors.onSurface,
                     ),
                   ),
-                  if (_userData['email'] != null && _userData['email'].isNotEmpty)
-                    Padding(
-                      padding: const EdgeInsets.only(top: 8.0),
-                      child: Text(
-                        _userData['email'],
-                        style: TextStyle(
-                          fontSize: 16,
-                          color: colors.onSurface.withOpacity(0.7),
-                        ),
-                      ),
-                    ),
                 ],
               ),
             ),

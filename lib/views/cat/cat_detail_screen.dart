@@ -2,6 +2,7 @@ import 'package:cat_app/views/auth/complete_profile_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'edit_cat_screen.dart';
+import '../user/user_main.dart';
 
 class CatDetailScreen extends StatefulWidget {
   final Map<String, dynamic> cat;
@@ -122,7 +123,13 @@ class _CatDetailScreenState extends State<CatDetailScreen> {
       if (mounted) {
         // Call parent's refresh function
         widget.onRefresh();
-        Navigator.pop(context, true); // Return true to indicate deletion
+        Navigator.pushAndRemoveUntil(
+          context,
+          MaterialPageRoute(
+            builder: (context) => const UserMain(),
+          ),
+          (route) => false,
+        );
       }
     } catch (e) {
       if (mounted) {
